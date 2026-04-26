@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenConnect - Smart Clean & Green Community Platform</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Splash Screen -->
+        <div class="splash-screen" id="splashScreen">
+            <div class="splash-content">
+                <div class="splash-logo">
+                    <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+                        <circle cx="60" cy="60" r="58" fill="url(#splashGradient)" stroke="rgba(46, 204, 113, 0.3)" stroke-width="4"/>
+                        <path d="M60 15C52.5 15 45 22.5 45 30C45 37.5 52.5 45 60 45C67.5 45 75 37.5 75 30C75 22.5 67.5 15 60 15Z" fill="white"/>
+                        <path d="M30 45C30 52.5 37.5 60 45 60C52.5 60 60 52.5 60 45C60 37.5 52.5 30 45 30C37.5 30 30 37.5 30 45Z" fill="white" opacity="0.9"/>
+                        <path d="M75 45C75 52.5 82.5 60 90 60C97.5 60 105 52.5 105 45C105 37.5 97.5 30 90 30C82.5 30 75 37.5 75 45Z" fill="white" opacity="0.9"/>
+                        <path d="M60 75C52.5 75 45 82.5 45 90C45 97.5 52.5 105 60 105C67.5 105 75 97.5 75 90C75 82.5 67.5 75 60 75Z" fill="white"/>
+                        <circle cx="60" cy="60" r="15" fill="#2ECC71"/>
+                        <path d="M60 45L45 60L60 75L75 60L60 45Z" fill="white" opacity="0.8"/>
+                        <defs>
+                            <linearGradient id="splashGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#2ECC71"/>
+                                <stop offset="50%" style="stop-color:#27AE60"/>
+                                <stop offset="100%" style="stop-color:#1E8449"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <h1 class="splash-title">GreenConnect</h1>
+                <p class="splash-subtitle">Smart Clean & Green Community Platform</p>
+                <div class="splash-loader">
+                    <div class="loader-dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-left">
+                <button class="add-post-btn" onclick="openCamera()">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            <div class="top-center">
+                <div class="logo-container">
+                    <div class="app-logo">
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                            <circle cx="16" cy="16" r="15" fill="url(#logoGradient)" stroke="rgba(46, 204, 113, 0.3)" stroke-width="2"/>
+                            <path d="M16 4C14 4 12 6 12 8C12 10 14 12 16 12C18 12 20 10 20 8C20 6 18 4 16 4Z" fill="white"/>
+                            <path d="M8 12C8 14 10 16 12 16C14 16 16 14 16 12C16 10 14 8 12 8C10 8 8 10 8 12Z" fill="white" opacity="0.9"/>
+                            <path d="M20 12C20 14 22 16 24 16C26 16 28 14 28 12C28 10 26 8 24 8C22 8 20 10 20 12Z" fill="white" opacity="0.9"/>
+                            <path d="M16 20C14 20 12 22 12 24C12 26 14 28 16 28C18 28 20 26 20 24C20 22 18 20 16 20Z" fill="white"/>
+                            <circle cx="16" cy="16" r="4" fill="#2ECC71"/>
+                            <path d="M16 12L12 16L16 20L20 16L16 12Z" fill="white" opacity="0.8"/>
+                            <defs>
+                                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#2ECC71"/>
+                                    <stop offset="50%" style="stop-color:#27AE60"/>
+                                    <stop offset="100%" style="stop-color:#1E8449"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h1 class="app-title">GreenConnect</h1>
+                </div>
+            </div>
+            <div class="top-right">
+                <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Theme">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+                <button class="notification-btn" onclick="openNotifications()">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">3</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="mainContent">
+            <!-- Home Feed (Default) -->
+            <div class="screen active" id="homeScreen">
+                <div class="feed-container">
+                    <!-- Stories Section -->
+                    <div class="stories-section">
+                        <div class="stories-container">
+                            <div class="story-item add-story" onclick="openCamera()">
+                                <div class="story-avatar add-story-avatar">
+                                    <i class="fas fa-plus"></i>
+                                </div>
+                                <span class="story-username">Your Story</span>
+                            </div>
+                            <div class="story-item" onclick="viewStory('sarah')">
+                                <div class="story-avatar">
+                                    <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&h=60&fit=crop&crop=face" alt="Sarah">
+                                </div>
+                                <span class="story-username">Sarah</span>
+                            </div>
+                            <div class="story-item" onclick="viewStory('mike')">
+                                <div class="story-avatar">
+                                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&crop=face" alt="Mike">
+                                </div>
+                                <span class="story-username">Mike</span>
+                            </div>
+                            <div class="story-item" onclick="viewStory('emma')">
+                                <div class="story-avatar">
+                                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60&h=60&fit=crop&crop=face" alt="Emma">
+                                </div>
+                                <span class="story-username">Emma</span>
+                            </div>
+                            <div class="story-item" onclick="viewStory('alex')">
+                                <div class="story-avatar">
+                                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face" alt="Alex">
+                                </div>
+                                <span class="story-username">Alex</span>
+                            </div>
+                            <div class="story-item" onclick="viewStory('lisa')">
+                                <div class="story-avatar">
+                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=60&h=60&fit=crop&crop=face" alt="Lisa">
+                                </div>
+                                <span class="story-username">Lisa</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="trending-section">
+                        <h3>🌱 Trending Eco Activities</h3>
+                        <div class="trending-cards">
+                            <div class="trending-card">
+                                <span class="trending-icon">🌊</span>
+                                <span>Beach Cleanup</span>
+                                <div class="trending-badge">50+ joined</div>
+                            </div>
+                            <div class="trending-card">
+                                <span class="trending-icon">🌳</span>
+                                <span>Tree Planting</span>
+                                <div class="trending-badge">New Event</div>
+                            </div>
+                            <div class="trending-card">
+                                <span class="trending-icon">♻️</span>
+                                <span>Recycling Drive</span>
+                                <div class="trending-badge">This Weekend</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="posts-feed" id="postsFeed">
+                        <!-- Posts will be dynamically loaded -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Screen -->
+            <div class="screen" id="searchScreen">
+                <div class="search-container">
+                    <div class="search-header">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" placeholder="Search users..." id="searchInput">
+                        </div>
+                        <div class="search-tabs">
+                            <button class="tab-btn active" data-tab="users" onclick="switchSearchTab('users')">
+                                <i class="fas fa-users"></i>
+                                Users
+                            </button>
+                            <button class="tab-btn" data-tab="map" onclick="switchSearchTab('map')">
+                                <i class="fas fa-map"></i>
+                                Map
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Users Tab -->
+                    <div class="search-tab-content active" id="usersTab">
+                        <div class="search-results" id="searchResults">
+                            <!-- Default user suggestions -->
+                            <div class="search-suggestions">
+                                <div class="suggestion-section">
+                                    <h4>👥 Suggested Users</h4>
+                                    <div class="suggestion-item" onclick="selectUser('Sarah Johnson')">
+                                        <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=50&h=50&fit=crop&crop=face" alt="Sarah" class="suggestion-avatar">
+                                        <div>
+                                            <div class="suggestion-name">Sarah Johnson</div>
+                                            <div class="suggestion-subtitle">Environmental Advocate • 1.2k followers</div>
+                                        </div>
+                                        <div class="follow-btn">Follow</div>
+                                    </div>
+                                    <div class="suggestion-item" onclick="selectUser('Mike Chen')">
+                                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face" alt="Mike" class="suggestion-avatar">
+                                        <div>
+                                            <div class="suggestion-name">Mike Chen</div>
+                                            <div class="suggestion-subtitle">Cleanup Organizer • 890 followers</div>
+                                        </div>
+                                        <div class="follow-btn">Follow</div>
+                                    </div>
+                                    <div class="suggestion-item" onclick="selectUser('Emma Wilson')">
+                                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop&crop=face" alt="Emma" class="suggestion-avatar">
+                                        <div>
+                                            <div class="suggestion-name">Emma Wilson</div>
+                                            <div class="suggestion-subtitle">Tree Planting Expert • 654 followers</div>
+                                        </div>
+                                        <div class="follow-btn">Follow</div>
+                                    </div>
+                                    <div class="suggestion-item" onclick="selectUser('Alex Rodriguez')">
+                                        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face" alt="Alex" class="suggestion-avatar">
+                                        <div>
+                                            <div class="suggestion-name">Alex Rodriguez</div>
+                                            <div class="suggestion-subtitle">Ocean Cleanup Volunteer • 432 followers</div>
+                                        </div>
+                                        <div class="follow-btn">Follow</div>
+                                    </div>
+                                    <div class="suggestion-item" onclick="selectUser('Lisa Park')">
+                                        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=50&h=50&fit=crop&crop=face" alt="Lisa" class="suggestion-avatar">
+                                        <div>
+                                            <div class="suggestion-name">Lisa Park</div>
+                                            <div class="suggestion-subtitle">Recycling Advocate • 789 followers</div>
+                                        </div>
+                                        <div class="follow-btn">Follow</div>
+                                    </div>
+                                    <div class="suggestion-item" onclick="selectUser('David Kim')">
+                                        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop&crop=face" alt="David" class="suggestion-avatar">
+                                        <div>
+                                            <div class="suggestion-name">David Kim</div>
+                                            <div class="suggestion-subtitle">Green Energy Enthusiast • 567 followers</div>
+                                        </div>
+                                        <div class="follow-btn">Follow</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Tab -->
+                    <div class="search-tab-content" id="mapTab">
+                        <div class="map-container">
+                            <div class="map-header">
+                                <h3>🗺️ Nearby Activities & Issues</h3>
+                                <div class="map-legend">
+                                    <div class="legend-item">
+                                        <span class="legend-dot cleanup"></span>
+                                        <span>Cleanup Drives</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-dot issue"></span>
+                                        <span>Reported Issues</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="map-view" id="mapView">
+                                <div class="map-placeholder">
+                                    <i class="fas fa-map-marked-alt"></i>
+                                    <p>Interactive Map</p>
+                                    <small>Showing your current location</small>
+                                </div>
+                                
+                                <!-- Map Markers -->
+                                <div class="map-marker cleanup-marker" style="top: 30%; left: 25%;" onclick="showMarkerInfo('cleanup1')">
+                                    <i class="fas fa-broom"></i>
+                                    <div class="marker-pulse"></div>
+                                </div>
+                                <div class="map-marker cleanup-marker" style="top: 60%; left: 70%;" onclick="showMarkerInfo('cleanup2')">
+                                    <i class="fas fa-seedling"></i>
+                                    <div class="marker-pulse"></div>
+                                </div>
+                                <div class="map-marker issue-marker" style="top: 45%; left: 40%;" onclick="showMarkerInfo('issue1')">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div class="marker-pulse"></div>
+                                </div>
+                                <div class="map-marker issue-marker" style="top: 75%; left: 55%;" onclick="showMarkerInfo('issue2')">
+                                    <i class="fas fa-trash"></i>
+                                    <div class="marker-pulse"></div>
+                                </div>
+                                <div class="map-marker user-location" style="top: 50%; left: 50%;">
+                                    <i class="fas fa-user"></i>
+                                    <div class="location-pulse"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Map Info Cards -->
+                            <div class="map-info-cards">
+                                <div class="info-card">
+                                    <div class="card-icon cleanup">
+                                        <i class="fas fa-broom"></i>
+                                    </div>
+                                    <div class="card-content">
+                                        <h4>Beach Cleanup Drive</h4>
+                                        <p>Tomorrow 9:00 AM • Central Beach</p>
+                                        <span class="participants">52 joined</span>
+                                    </div>
+                                    <button class="join-btn">Join</button>
+                                </div>
+                                
+                                <div class="info-card">
+                                    <div class="card-icon cleanup">
+                                        <i class="fas fa-seedling"></i>
+                                    </div>
+                                    <div class="card-content">
+                                        <h4>Tree Planting Event</h4>
+                                        <p>Sunday 8:00 AM • Riverside Park</p>
+                                        <span class="participants">28 joined</span>
+                                    </div>
+                                    <button class="join-btn">Join</button>
+                                </div>
+                                
+                                <div class="info-card">
+                                    <div class="card-icon issue">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </div>
+                                    <div class="card-content">
+                                        <h4>Plastic Waste Overflow</h4>
+                                        <p>Reported 2h ago • 0.5km away</p>
+                                        <span class="priority high">High Priority</span>
+                                    </div>
+                                    <button class="view-btn">View</button>
+                                </div>
+                                
+                                <div class="info-card">
+                                    <div class="card-icon issue">
+                                        <i class="fas fa-trash"></i>
+                                    </div>
+                                    <div class="card-content">
+                                        <h4>Illegal Dumping Site</h4>
+                                        <p>Reported 5h ago • 1.2km away</p>
+                                        <span class="priority medium">Medium Priority</span>
+                                    </div>
+                                    <button class="view-btn">View</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Issue Screen -->
+            <div class="screen" id="reportScreen">
+                <div class="report-container">
+                    <div class="report-header">
+                        <h2>🚨 Report Environmental Issue</h2>
+                        <p>Help make your community cleaner</p>
+                    </div>
+                    <div class="report-steps">
+                        <div class="step active" id="step1">
+                            <div class="camera-interface">
+                                <div class="camera-preview">
+                                    <i class="fas fa-camera camera-icon"></i>
+                                    <p>Tap to capture or upload image</p>
+                                </div>
+                                <div class="camera-controls">
+                                    <button class="camera-btn" onclick="capturePhoto()">
+                                        <i class="fas fa-camera"></i>
+                                        Capture
+                                    </button>
+                                    <button class="camera-btn" onclick="uploadPhoto()">
+                                        <i class="fas fa-image"></i>
+                                        Gallery
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="step" id="step2">
+                            <div class="ai-analysis">
+                                <div class="analysis-loader">
+                                    <div class="loader-animation"></div>
+                                    <p>AI analyzing image...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="step" id="step3">
+                            <div class="report-form">
+                                <div class="form-group">
+                                    <label>Issue Type</label>
+                                    <select id="issueType">
+                                        <option>Plastic Waste</option>
+                                        <option>Illegal Dumping</option>
+                                        <option>Overflowing Bins</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Description</label>
+                                    <textarea id="issueDescription" placeholder="Describe the issue..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Location</label>
+                                    <div class="location-input">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span>Current Location (Auto-detected)</span>
+                                    </div>
+                                </div>
+                                <button class="submit-btn" onclick="submitReport()">Submit Report</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- E-Commerce Screen -->
+            <div class="screen" id="ecommerceScreen">
+                <div class="ecommerce-container">
+                    <div class="ecommerce-header">
+                        <div class="header-content">
+                            <h2>🛒 Eco Marketplace</h2>
+                            <p>Redeem your eco points for sustainable products</p>
+                        </div>
+                        <div class="points-display">
+                            <div class="points-icon">
+                                <i class="fas fa-leaf"></i>
+                            </div>
+                            <div class="points-info">
+                                <span class="points-number">1,250</span>
+                                <span class="points-label">Points</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="featured-section">
+                        <h3>⭐ Featured Products</h3>
+                        <div class="featured-carousel">
+                            <div class="featured-card">
+                                <div class="featured-badge">🔥 Hot Deal</div>
+                                <div class="featured-image">🌱</div>
+                                <h4>Eco Starter Kit</h4>
+                                <p>Complete sustainable living bundle</p>
+                                <div class="featured-price">
+                                    <span class="original-price">500</span>
+                                    <span class="sale-price">🍃 350</span>
+                                </div>
+                                <button class="featured-btn">Get Now</button>
+                            </div>
+                            <div class="featured-card">
+                                <div class="featured-badge">⚡ Limited</div>
+                                <div class="featured-image">☀️</div>
+                                <h4>Solar Power Kit</h4>
+                                <p>Portable renewable energy solution</p>
+                                <div class="featured-price">
+                                    <span class="sale-price">🍃 800</span>
+                                </div>
+                                <button class="featured-btn">Get Now</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="categories-section">
+                        <h3>🏷️ Categories</h3>
+                        <div class="product-categories">
+                            <button class="category-btn active" onclick="filterProducts('All')">
+                                <i class="fas fa-th-large"></i>
+                                All
+                            </button>
+                            <button class="category-btn" onclick="filterProducts('Reusable')">
+                                <i class="fas fa-recycle"></i>
+                                Reusable
+                            </button>
+                            <button class="category-btn" onclick="filterProducts('Organic')">
+                                <i class="fas fa-seedling"></i>
+                                Organic
+                            </button>
+                            <button class="category-btn" onclick="filterProducts('Eco Home')">
+                                <i class="fas fa-home"></i>
+                                Eco Home
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="products-section">
+                        <div class="section-header">
+                            <h3>🛍️ All Products</h3>
+                            <div class="sort-options">
+                                <select class="sort-select">
+                                    <option>Sort by Price</option>
+                                    <option>Low to High</option>
+                                    <option>High to Low</option>
+                                    <option>Most Popular</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="products-grid" id="productsGrid">
+                            <!-- Products will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Screen -->
+            <div class="screen" id="profileScreen">
+                <div class="profile-container">
+                    <div class="profile-header">
+                        <div class="profile-avatar">
+                            <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face" alt="Profile">
+                        </div>
+                        <h2>Sarah Johnson</h2>
+                        <p class="profile-bio">Environmental advocate 🌱 | Making our planet greener</p>
+                    </div>
+                    
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">1,250</span>
+                            <span class="stat-label">Points</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">23</span>
+                            <span class="stat-label">Reports</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">8</span>
+                            <span class="stat-label">Drives</span>
+                        </div>
+                    </div>
+
+                    <div class="achievements-section">
+                        <h3>🏆 Achievements</h3>
+                        <div class="achievements-grid">
+                            <div class="achievement-badge earned">
+                                <i class="fas fa-camera"></i>
+                                <span>First Reporter</span>
+                            </div>
+                            <div class="achievement-badge earned">
+                                <i class="fas fa-leaf"></i>
+                                <span>Eco Warrior</span>
+                            </div>
+                            <div class="achievement-badge">
+                                <i class="fas fa-users"></i>
+                                <span>Community Leader</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-actions">
+                        <button class="profile-btn">Edit Profile</button>
+                        <button class="profile-btn">Settings</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-screen="homeScreen">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </button>
+            <button class="nav-item" data-screen="searchScreen">
+                <i class="fas fa-search"></i>
+                <span>Search</span>
+            </button>
+            <button class="nav-item report-nav-btn" data-screen="reportScreen">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Report</span>
+            </button>
+            <button class="nav-item" data-screen="ecommerceScreen">
+                <i class="fas fa-shopping-bag"></i>
+                <span>Shop</span>
+            </button>
+            <button class="nav-item" data-screen="profileScreen">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </button>
+        </nav>
+
+        <!-- Modals -->
+        <div class="modal" id="cameraModal">
+            <div class="modal-content post-modal">
+                <div class="modal-header">
+                    <button class="close-btn" onclick="closeModal('cameraModal')">&times;</button>
+                    <h3>Create New Post</h3>
+                    <button class="share-btn" onclick="shareNewPost()">Share</button>
+                </div>
+                
+                <div class="post-creation-steps">
+                    <!-- Step 1: Camera/Photo Selection -->
+                    <div class="creation-step active" id="photoStep">
+                        <div class="camera-interface">
+                            <div class="camera-preview" id="cameraPreview">
+                                <i class="fas fa-camera camera-icon"></i>
+                                <p>Tap to capture or upload image</p>
+                            </div>
+                            <div class="camera-controls">
+                                <button class="camera-btn" onclick="captureNewPhoto()">
+                                    <i class="fas fa-camera"></i>
+                                    Camera
+                                </button>
+                                <button class="camera-btn" onclick="uploadNewPhoto()">
+                                    <i class="fas fa-image"></i>
+                                    Gallery
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2: Add Details -->
+                    <div class="creation-step" id="detailsStep">
+                        <div class="post-details">
+                            <div class="post-preview">
+                                <div class="preview-image" id="previewImage">
+                                    <img src="" alt="Preview" style="display: none;">
+                                    <div class="placeholder-preview">
+                                        <i class="fas fa-image"></i>
+                                        <span>Photo Preview</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="post-form">
+                                <div class="user-info">
+                                    <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face" alt="You" class="user-avatar">
+                                    <span class="username">Sarah Johnson</span>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <textarea id="postCaption" placeholder="Write a caption..." maxlength="500"></textarea>
+                                    <div class="caption-counter">
+                                        <span id="captionCount">0</span>/500
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="location-section">
+                                        <div class="location-header">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <span>Add Location</span>
+                                        </div>
+                                        <div class="location-search">
+                                            <input type="text" id="locationInput" placeholder="Search locations...">
+                                            <button class="location-btn" onclick="getCurrentLocation()">
+                                                <i class="fas fa-crosshairs"></i>
+                                            </button>
+                                        </div>
+                                        <div class="location-suggestions" id="locationSuggestions">
+                                            <div class="location-item" onclick="selectLocation('Central Park, NYC')">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                                <div>
+                                                    <div class="location-name">Central Park</div>
+                                                    <div class="location-address">New York, NY</div>
+                                                </div>
+                                            </div>
+                                            <div class="location-item" onclick="selectLocation('Times Square, NYC')">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                                <div>
+                                                    <div class="location-name">Times Square</div>
+                                                    <div class="location-address">New York, NY</div>
+                                                </div>
+                                            </div>
+                                            <div class="location-item" onclick="selectLocation('Brooklyn Bridge, NYC')">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                                <div>
+                                                    <div class="location-name">Brooklyn Bridge</div>
+                                                    <div class="location-address">New York, NY</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="post-options">
+                                        <div class="option-item">
+                                            <i class="fas fa-users"></i>
+                                            <span>Tag People</span>
+                                            <i class="fas fa-chevron-right"></i>
+                                        </div>
+                                        <div class="option-item">
+                                            <i class="fas fa-hashtag"></i>
+                                            <span>Add Hashtags</span>
+                                            <i class="fas fa-chevron-right"></i>
+                                        </div>
+                                        <div class="option-item">
+                                            <i class="fas fa-leaf"></i>
+                                            <span>Environmental Impact</span>
+                                            <i class="fas fa-chevron-right"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="notificationModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Notifications</h3>
+                    <button class="close-btn" onclick="closeModal('notificationModal')">&times;</button>
+                </div>
+                <div class="notifications-list">
+                    <div class="notification-item">
+                        <i class="fas fa-heart notification-icon"></i>
+                        <div class="notification-content">
+                            <p>Your post received 15 new likes</p>
+                            <span class="notification-time">2 hours ago</span>
+                        </div>
+                    </div>
+                    <div class="notification-item">
+                        <i class="fas fa-check-circle notification-icon"></i>
+                        <div class="notification-content">
+                            <p>Your reported issue has been resolved</p>
+                            <span class="notification-time">1 day ago</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
