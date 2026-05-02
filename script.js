@@ -3,6 +3,12 @@ let currentScreen = 'homeScreen';
 let posts = [];
 let products = [];
 let reportStep = 1;
+let currentUser = null;
+let authToken = null;
+let notifications = [];
+
+// API Base URL
+const API_BASE_URL = 'http://localhost:3000/api';
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', function() {
@@ -17,13 +23,757 @@ function showSplashScreen() {
         
         // Initialize app after splash screen
         setTimeout(() => {
+            checkAuthStatus();
             initializeApp();
             loadPosts();
             loadProducts();
             setupEventListeners();
             loadThemePreference();
+            initNotificationSystem();
         }, 500);
     }, 3000);
+}
+
+// Authentication Functions
+async function checkAuthStatus() {
+    authToken = localStorage.getItem('authToken');
+    const userData = localStorage.getItem('userData');
+    
+    if (authToken && userData) {
+        currentUser = JSON.parse(userData);
+        
+        // Validate token with server
+        try {
+            const response = await fetch(`${API_BASE_URL}/users/me`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+            
+            if (response.ok) {
+                // Token is valid, update user data
+                const data = await response.json();
+                currentUser = data;
+                localStorage.setItem('userData', JSON.stringify(currentUser));
+                updateUIForAuthenticatedUser();
+            } else if (response.status === 401) {
+                // Token invalid or user not found - clear auth
+                console.log('Session expired or user not found');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userData');
+                authToken = null;
+                currentUser = null;
+            }
+        } catch (error) {
+            console.error('Auth validation error:', error);
+            // Keep local auth on network error
+            updateUIForAuthenticatedUser();
+        }
+    } else {
+        currentUser = null;
+        authToken = null;
+    }
+}
+
+function updateUIForAuthenticatedUser() {
+    // Update profile screen
+    renderProfileScreen();
+    
+    // Update user info in post creation modal
+    const userAvatar = document.querySelector('.post-details .user-avatar');
+    const username = document.querySelector('.post-details .username');
+    
+    if (userAvatar && currentUser) {
+        userAvatar.src = currentUser.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face';
+    }
+    if (username && currentUser) {
+        username.textContent = currentUser.name || currentUser.email;
+    }
+}
+
+function renderProfileScreen() {
+    const profileContainer = document.getElementById('profileContainer');
+    
+    if (!currentUser) {
+        // Show login prompt
+        profileContainer.innerHTML = `
+            <div class="login-prompt">
+                <div class="login-prompt-icon">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h2>Welcome to GreenConnect</h2>
+                <p>Login or create an account to access your profile and start making a difference!</p>
+                <button class="auth-btn" onclick="showLoginModal()">
+                    <i class="fas fa-sign-in-alt"></i> Login / Sign Up
+                </button>
+            </div>
+        `;
+    } else {
+        // Show user profile
+        profileContainer.innerHTML = `
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <img src="${currentUser.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face'}" alt="Profile">
+                </div>
+                <h2>${currentUser.name || currentUser.email}</h2>
+                <p class="profile-bio">${currentUser.bio || 'Environmental advocate 🌱 | Making our planet greener'}</p>
+            </div>
+            
+            <div class="profile-stats">
+                <div class="stat-item">
+                    <span class="stat-number">${currentUser.ecoPoints || 0}</span>
+                    <span class="stat-label">Points</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${currentUser.reportsCount || 0}</span>
+                    <span class="stat-label">Reports</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${currentUser.eventsJoined || 0}</span>
+                    <span class="stat-label">Drives</span>
+                </div>
+            </div>
+
+            <div class="achievements-section">
+                <h3>🏆 Achievements</h3>
+                <div class="achievements-grid">
+                    <div class="achievement-badge earned">
+                        <i class="fas fa-camera"></i>
+                        <span>First Reporter</span>
+                    </div>
+                    <div class="achievement-badge earned">
+                        <i class="fas fa-leaf"></i>
+                        <span>Eco Warrior</span>
+                    </div>
+                    <div class="achievement-badge">
+                        <i class="fas fa-users"></i>
+                        <span>Community Leader</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <button class="profile-btn" onclick="editProfile()">
+                    <i class="fas fa-edit"></i> Edit Profile
+                </button>
+                <button class="profile-btn" onclick="openSettings()">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+            </div>
+        `;
+    }
+}
+
+function showLoginModal() {
+    const modal = document.getElementById('authModal');
+    modal.classList.add('active');
+    switchAuthTab('login');
+}
+
+function switchAuthTab(tab) {
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    const tabs = document.querySelectorAll('.auth-tab');
+    
+    tabs.forEach(t => t.classList.remove('active'));
+    
+    if (tab === 'login') {
+        loginForm.classList.add('active');
+        signupForm.classList.remove('active');
+        tabs[0].classList.add('active');
+        document.getElementById('authModalTitle').textContent = 'Welcome Back!';
+    } else {
+        signupForm.classList.add('active');
+        loginForm.classList.remove('active');
+        tabs[1].classList.add('active');
+        document.getElementById('authModalTitle').textContent = 'Create Account';
+    }
+}
+
+async function handleLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+        showNotification('Please enter email and password');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            authToken = data.token;
+            currentUser = data.user;
+            
+            localStorage.setItem('authToken', authToken);
+            localStorage.setItem('userData', JSON.stringify(currentUser));
+            
+            showNotification('Login successful! Welcome back 🎉');
+            closeModal('authModal');
+            updateUIForAuthenticatedUser();
+            
+            // Clear form
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+        } else {
+            showNotification(data.message || 'Login failed. Please check your credentials.');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showNotification('Login failed. Please try again.');
+    }
+}
+
+async function confirmVerificationCode() {
+    const email = document.getElementById('signupEmail').value.trim();
+    const code = document.getElementById('verificationCode').value.trim();
+    const statusEl = document.getElementById('verificationStatus');
+    const confirmBtn = document.getElementById('confirmCodeBtn');
+
+    if (!code) {
+        showNotification('Please enter the verification code');
+        return;
+    }
+
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Checking...';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/verify-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, code })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            statusEl.textContent = '✅ Email verified!';
+            statusEl.style.color = '#2ECC71';
+            confirmBtn.textContent = '✓ Confirmed';
+            confirmBtn.style.background = '#27AE60';
+            showNotification('Email verified successfully! ✅');
+        } else {
+            statusEl.textContent = '❌ ' + (data.error?.message || 'Invalid code');
+            statusEl.style.color = '#e74c3c';
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirm';
+            showNotification(data.error?.message || 'Invalid verification code');
+        }
+    } catch (error) {
+        statusEl.textContent = '❌ Verification failed. Try again.';
+        statusEl.style.color = '#e74c3c';
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirm';
+        showNotification('Verification failed. Please try again.');
+    }
+}
+
+async function sendVerificationCode() {
+    const email = document.getElementById('signupEmail').value.trim();
+    const sendBtn = document.getElementById('sendCodeBtn');
+
+    if (!email) {
+        showNotification('Please enter your email first');
+        return;
+    }
+
+    // Basic email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Please enter a valid email address');
+        return;
+    }
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending...';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/send-verification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Show verification code input
+            document.getElementById('verificationCodeGroup').style.display = 'block';
+            document.getElementById('verificationStatus').textContent = '';
+            document.getElementById('verificationStatus').style.color = '';
+            showNotification('Verification code sent to your email! 📧');
+
+            // Start 60s cooldown on button
+            let countdown = 60;
+            sendBtn.textContent = `Resend (${countdown}s)`;
+            const timer = setInterval(() => {
+                countdown--;
+                sendBtn.textContent = `Resend (${countdown}s)`;
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = 'Resend';
+                }
+            }, 1000);
+        } else {
+            showNotification(data.error?.message || 'Failed to send code');
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send Code';
+        }
+    } catch (error) {
+        console.error('Send code error:', error);
+        showNotification('Failed to send code. Please try again.');
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send Code';
+    }
+}
+
+async function handleSignup() {
+    const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const bio = document.getElementById('signupBio').value.trim();
+    const code = document.getElementById('verificationCode').value.trim();
+    const statusEl = document.getElementById('verificationStatus');
+
+    if (!name || !email || !password) {
+        showNotification('Please fill in all required fields');
+        return;
+    }
+
+    if (password.length < 6) {
+        showNotification('Password must be at least 6 characters');
+        return;
+    }
+
+    if (!code) {
+        showNotification('Please enter the verification code sent to your email');
+        document.getElementById('verificationCodeGroup').style.display = 'block';
+        return;
+    }
+
+    // Check if email was already confirmed via the Confirm button
+    const confirmBtn = document.getElementById('confirmCodeBtn');
+    const alreadyVerified = confirmBtn && confirmBtn.textContent === '✓ Confirmed';
+
+    if (!alreadyVerified) {
+        showNotification('Please confirm your verification code first');
+        return;
+    }
+
+    // First verify the code
+    try {
+        const verifyResponse = await fetch(`${API_BASE_URL}/auth/verify-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, code })
+        });
+
+        const verifyData = await verifyResponse.json();
+
+        if (!verifyResponse.ok) {
+            statusEl.textContent = '❌ ' + (verifyData.error?.message || 'Invalid code');
+            statusEl.style.color = '#e74c3c';
+            showNotification(verifyData.error?.message || 'Invalid verification code');
+            return;
+        }
+
+        statusEl.textContent = '✅ Email verified!';
+        statusEl.style.color = '#2ECC71';
+
+    } catch (error) {
+        showNotification('Verification failed. Please try again.');
+        return;
+    }
+
+    // Now register
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password, bio })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            authToken = data.token;
+            currentUser = data.user;
+
+            localStorage.setItem('authToken', authToken);
+            localStorage.setItem('userData', JSON.stringify(currentUser));
+
+            showNotification('Account created successfully! Welcome to GreenConnect 🎉');
+            closeModal('authModal');
+            updateUIForAuthenticatedUser();
+
+            // Clear form
+            document.getElementById('signupName').value = '';
+            document.getElementById('signupEmail').value = '';
+            document.getElementById('signupPassword').value = '';
+            document.getElementById('signupBio').value = '';
+            document.getElementById('verificationCode').value = '';
+            document.getElementById('verificationCodeGroup').style.display = 'none';
+            if (statusEl) statusEl.textContent = '';
+            const confirmBtn = document.getElementById('confirmCodeBtn');
+            if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm'; confirmBtn.style.background = ''; }
+        } else {
+            showNotification(data.error?.message || data.message || 'Signup failed. Please try again.');
+        }
+    } catch (error) {
+        console.error('Signup error:', error);
+        showNotification('Signup failed. Please try again.');
+    }
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        authToken = null;
+        currentUser = null;
+        
+        showNotification('Logged out successfully');
+        closeModal('settingsModal');
+        renderProfileScreen();
+        
+        // Redirect to home screen
+        showScreen('homeScreen');
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => item.classList.remove('active'));
+        navItems[0].classList.add('active');
+    }
+}
+
+function editProfile() {
+    if (!currentUser) {
+        showLoginModal();
+        return;
+    }
+    
+    // Populate form with current data
+    document.getElementById('editName').value = currentUser.name || '';
+    document.getElementById('editEmail').value = currentUser.email || '';
+    document.getElementById('editBio').value = currentUser.bio || '';
+    
+    // Set profile picture preview
+    const profilePreviewImage = document.getElementById('profilePreviewImage');
+    if (profilePreviewImage) {
+        profilePreviewImage.src = currentUser.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face';
+    }
+    
+    // Store current avatar in a temporary variable
+    window.selectedProfileImage = currentUser.avatar || null;
+    
+    const modal = document.getElementById('editProfileModal');
+    modal.classList.add('active');
+}
+
+// Open camera for profile picture
+function openProfileCamera() {
+    // Check if device supports camera
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Create a temporary modal for camera
+        const cameraModal = document.createElement('div');
+        cameraModal.className = 'modal active';
+        cameraModal.id = 'profileCameraModal';
+        cameraModal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3>Take Profile Photo</h3>
+                    <button class="close-btn" onclick="closeProfileCamera()">&times;</button>
+                </div>
+                <div style="padding: 20px;">
+                    <video id="profileCameraVideo" autoplay playsinline style="width: 100%; border-radius: 15px; background: #000;"></video>
+                    <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: center;">
+                        <button onclick="captureProfilePhoto()" class="camera-btn" style="background: #2ECC71; color: white; border: none; padding: 12px 24px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                            <i class="fas fa-camera"></i> Capture
+                        </button>
+                        <button onclick="closeProfileCamera()" class="camera-btn" style="background: #e74c3c; color: white; border: none; padding: 12px 24px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(cameraModal);
+        
+        const video = document.getElementById('profileCameraVideo');
+        
+        // Request camera access
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'user' // Use front camera for selfie
+            } 
+        })
+        .then(function(stream) {
+            window.profileCameraStream = stream;
+            video.srcObject = stream;
+            showNotification('Camera ready! 📸');
+        })
+        .catch(function(error) {
+            console.error('Camera error:', error);
+            showNotification('Camera access denied. Using file picker instead.');
+            closeProfileCamera();
+            openProfileGallery();
+        });
+    } else {
+        // Fallback to file input
+        openProfileGallery();
+    }
+}
+
+// Capture photo from camera stream
+function captureProfilePhoto() {
+    const video = document.getElementById('profileCameraVideo');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convert canvas to data URL
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    
+    // Update profile picture preview
+    updateProfilePicturePreview(imageDataUrl);
+    
+    // Close camera modal
+    closeProfileCamera();
+    
+    showNotification('Photo captured! ✨');
+}
+
+// Close profile camera modal
+function closeProfileCamera() {
+    if (window.profileCameraStream) {
+        window.profileCameraStream.getTracks().forEach(track => track.stop());
+        window.profileCameraStream = null;
+    }
+    
+    const cameraModal = document.getElementById('profileCameraModal');
+    if (cameraModal) {
+        cameraModal.remove();
+    }
+}
+
+// Open gallery for profile picture
+function openProfileGallery() {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    
+    fileInput.onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showNotification('Please select an image file');
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('Image size must be less than 5MB');
+                return;
+            }
+            
+            // Read the file
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const imageDataUrl = e.target.result;
+                updateProfilePicturePreview(imageDataUrl);
+                showNotification('Photo selected! ✨');
+            };
+            
+            reader.onerror = function() {
+                showNotification('Failed to read image file');
+            };
+            
+            reader.readAsDataURL(file);
+        }
+    };
+    
+    fileInput.click();
+}
+
+// Update profile picture preview
+function updateProfilePicturePreview(imageDataUrl) {
+    const profilePreviewImage = document.getElementById('profilePreviewImage');
+    if (profilePreviewImage) {
+        profilePreviewImage.src = imageDataUrl;
+    }
+    
+    // Store the image data for saving
+    window.selectedProfileImage = imageDataUrl;
+}
+
+async function saveProfile() {
+    if (!currentUser || !authToken) {
+        showNotification('Please login first');
+        return;
+    }
+    
+    const name = document.getElementById('editName').value.trim();
+    const bio = document.getElementById('editBio').value.trim();
+    const avatar = window.selectedProfileImage || currentUser.avatar || '';
+    
+    if (!name) {
+        showNotification('Name is required');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/users/me`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ name, bio, avatar })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            currentUser = { ...currentUser, ...data.user };
+            localStorage.setItem('userData', JSON.stringify(currentUser));
+            
+            showNotification('Profile updated successfully! ✨');
+            closeModal('editProfileModal');
+            updateUIForAuthenticatedUser();
+        } else if (response.status === 401) {
+            // User not found or token invalid - logout and show login
+            const errorMessage = data.error?.message || 'Session expired';
+            showNotification(`${errorMessage}. Please login again.`);
+            
+            // Clear auth data
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            authToken = null;
+            currentUser = null;
+            
+            // Close modal and show login
+            closeModal('editProfileModal');
+            renderProfileScreen();
+            showLoginModal();
+        } else {
+            // Handle other error response structure: { error: { message: '...' } }
+            const errorMessage = data.error?.message || data.message || 'Failed to update profile';
+            showNotification(errorMessage);
+        }
+    } catch (error) {
+        console.error('Update profile error:', error);
+        showNotification('Failed to update profile. Please try again.');
+    }
+}
+
+function openSettings() {
+    if (!currentUser) {
+        showLoginModal();
+        return;
+    }
+    
+    const modal = document.getElementById('settingsModal');
+    modal.classList.add('active');
+}
+
+// Notification Settings Functions
+function openNotificationSettings() {
+    closeModal('settingsModal');
+    const modal = document.getElementById('notificationSettingsModal');
+    modal.classList.add('active');
+    loadNotificationSettings();
+}
+
+function loadNotificationSettings() {
+    // Load saved notification settings from localStorage
+    const settings = JSON.parse(localStorage.getItem('notificationSettings') || '{}');
+    
+    // Set checkbox states
+    document.getElementById('enableNotifications').checked = settings.enableNotifications !== false;
+    document.getElementById('likesComments').checked = settings.likesComments !== false;
+    document.getElementById('newFollowers').checked = settings.newFollowers !== false;
+    document.getElementById('eventReminders').checked = settings.eventReminders !== false;
+    document.getElementById('issueUpdates').checked = settings.issueUpdates !== false;
+    document.getElementById('ecoPoints').checked = settings.ecoPoints !== false;
+    document.getElementById('weeklySummary').checked = settings.weeklySummary === true;
+    document.getElementById('newsletter').checked = settings.newsletter === true;
+}
+
+function toggleNotificationSetting(settingName) {
+    const checkbox = document.getElementById(settingName);
+    const settings = JSON.parse(localStorage.getItem('notificationSettings') || '{}');
+    
+    settings[settingName] = checkbox.checked;
+    localStorage.setItem('notificationSettings', JSON.stringify(settings));
+    
+    showNotification(checkbox.checked ? `${settingName} enabled ✓` : `${settingName} disabled`);
+}
+
+// Privacy Settings Functions
+function openPrivacySettings() {
+    closeModal('settingsModal');
+    const modal = document.getElementById('privacySettingsModal');
+    modal.classList.add('active');
+    loadPrivacySettings();
+}
+
+function loadPrivacySettings() {
+    // Load saved privacy settings from localStorage
+    const settings = JSON.parse(localStorage.getItem('privacySettings') || '{}');
+    
+    // Set checkbox states
+    document.getElementById('privateAccount').checked = settings.privateAccount === true;
+    document.getElementById('activityStatus').checked = settings.activityStatus !== false;
+    document.getElementById('shareLocation').checked = settings.shareLocation !== false;
+    document.getElementById('preciseLocation').checked = settings.preciseLocation === true;
+    document.getElementById('allowComments').checked = settings.allowComments !== false;
+    document.getElementById('allowSharing').checked = settings.allowSharing !== false;
+    document.getElementById('analytics').checked = settings.analytics !== false;
+}
+
+function togglePrivacySetting(settingName) {
+    const checkbox = document.getElementById(settingName);
+    const settings = JSON.parse(localStorage.getItem('privacySettings') || '{}');
+    
+    settings[settingName] = checkbox.checked;
+    localStorage.setItem('privacySettings', JSON.stringify(settings));
+    
+    showNotification(checkbox.checked ? `${settingName} enabled ✓` : `${settingName} disabled`);
+}
+
+function confirmDeleteAccount() {
+    if (confirm('⚠️ Are you sure you want to delete your account?\n\nThis action cannot be undone. All your data will be permanently deleted.')) {
+        if (confirm('This is your last chance. Delete account permanently?')) {
+            // In a real app, this would call the backend API to delete the account
+            showNotification('Account deletion requested. Processing...');
+            setTimeout(() => {
+                logout();
+                showNotification('Account deleted successfully');
+            }, 2000);
+        }
+    }
+}
+
+// About App Functions
+function openAboutApp() {
+    closeModal('settingsModal');
+    const modal = document.getElementById('aboutAppModal');
+    modal.classList.add('active');
 }
 
 function initializeApp() {
@@ -36,6 +786,116 @@ function initializeApp() {
         document.body.style.transition = 'opacity 0.5s ease';
         document.body.style.opacity = '1';
     }, 100);
+    
+    // Initialize pull-to-refresh
+    initPullToRefresh();
+}
+
+// Refresh App Function (called by pull-to-refresh)
+async function refreshApp() {
+    showNotification('Refreshing... 🔄');
+    
+    try {
+        // Reload posts
+        await loadPosts();
+        
+        // Reload products
+        loadProducts();
+        
+        // Update notification badge
+        updateNotificationBadge();
+        
+        // Check for nearby issues if user is logged in
+        if (currentUser) {
+            checkNearbyIssues();
+        }
+        
+        // Update profile if on profile screen
+        if (currentScreen === 'profileScreen') {
+            renderProfileScreen();
+        }
+        
+        showNotification('Refreshed successfully! ✨');
+    } catch (error) {
+        console.error('Refresh error:', error);
+        showNotification('Failed to refresh. Please try again.');
+    }
+}
+
+// Pull to Refresh Functionality
+function initPullToRefresh() {
+    let startY = 0;
+    let currentY = 0;
+    let pulling = false;
+    const threshold = 80; // Pull distance threshold
+    const mainContent = document.getElementById('mainContent');
+    const indicator = document.getElementById('pullToRefreshIndicator');
+    const refreshText = indicator.querySelector('.refresh-text');
+    
+    // Touch start
+    mainContent.addEventListener('touchstart', (e) => {
+        // Only activate if at top of page
+        if (mainContent.scrollTop === 0) {
+            startY = e.touches[0].pageY;
+            pulling = true;
+        }
+    }, { passive: true });
+    
+    // Touch move
+    mainContent.addEventListener('touchmove', (e) => {
+        if (!pulling) return;
+        
+        currentY = e.touches[0].pageY;
+        const pullDistance = currentY - startY;
+        
+        // Only show indicator if pulling down
+        if (pullDistance > 0) {
+            const progress = Math.min(pullDistance / threshold, 1);
+            
+            // Show indicator
+            indicator.style.top = `${-80 + (pullDistance * 0.5)}px`;
+            
+            // Update text based on progress
+            if (progress >= 1) {
+                refreshText.textContent = 'Release to refresh';
+                indicator.classList.add('ready');
+            } else {
+                refreshText.textContent = 'Pull to refresh';
+                indicator.classList.remove('ready');
+            }
+        }
+    }, { passive: true });
+    
+    // Touch end
+    mainContent.addEventListener('touchend', async (e) => {
+        if (!pulling) return;
+        
+        const pullDistance = currentY - startY;
+        
+        // If pulled enough, trigger refresh
+        if (pullDistance >= threshold) {
+            indicator.classList.add('refreshing');
+            refreshText.textContent = 'Refreshing...';
+            
+            // Trigger refresh
+            await refreshApp();
+            
+            // Hide indicator after refresh
+            setTimeout(() => {
+                indicator.style.top = '-80px';
+                indicator.classList.remove('refreshing', 'ready');
+                refreshText.textContent = 'Pull to refresh';
+            }, 500);
+        } else {
+            // Reset indicator
+            indicator.style.top = '-80px';
+            indicator.classList.remove('ready');
+        }
+        
+        pulling = false;
+        startY = 0;
+        currentY = 0;
+    }, { passive: true });
 }
 
 // Theme Toggle Functions
@@ -128,6 +988,11 @@ function showScreen(screenId) {
         targetScreen.classList.add('active');
         currentScreen = screenId;
         
+        // Render profile screen when it's shown
+        if (screenId === 'profileScreen') {
+            renderProfileScreen();
+        }
+        
         // Add entrance animation
         targetScreen.style.transform = 'translateY(20px)';
         targetScreen.style.opacity = '0';
@@ -158,58 +1023,45 @@ function updateActiveCategory(activeBtn) {
 }
 
 // Load Posts Data
-function loadPosts() {
-    posts = [
-        {
-            id: 1,
-            user: {
-                name: 'Sarah Johnson',
-                avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-                location: 'Central Park, NYC'
-            },
-            image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=400&h=400&fit=crop',
-            caption: 'Amazing beach cleanup today! Collected over 50kg of plastic waste with our amazing volunteers. Every small action counts! 🌊♻️ #BeachCleanup #SaveOurOceans',
-            likes: 234,
-            liked: false,
-            comments: 18,
-            timestamp: '2 hours ago'
-        },
-        {
-            id: 2,
-            user: {
-                name: 'Mike Chen',
-                avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-                location: 'Golden Gate Park, SF'
-            },
-            image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop',
-            caption: 'Found this illegal dumping site during my morning jog. Already reported through the app! The AI detected it as mixed waste with high priority. Let\'s keep our neighborhoods clean! 💚',
-            likes: 156,
-            liked: true,
-            comments: 12,
-            timestamp: '4 hours ago'
-        },
-        {
-            id: 3,
-            user: {
-                name: 'Emma Wilson',
-                avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-                location: 'Riverside Park, LA'
-            },
-            image: 'https://images.unsplash.com/photo-1569163139394-de4e4f43e4e3?w=400&h=400&fit=crop',
-            caption: 'Planted 20 native trees today with the local environmental group! 🌳 These will help absorb CO2 and provide habitat for wildlife. Who wants to join our next planting event?',
-            likes: 189,
-            liked: false,
-            comments: 25,
-            timestamp: '6 hours ago'
+async function loadPosts() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/posts/feed`, {
+            headers: authToken ? {
+                'Authorization': `Bearer ${authToken}`
+            } : {}
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            posts = data.posts || [];
+        } else {
+            posts = [];
         }
-    ];
-
+    } catch (error) {
+        console.error('Error loading posts:', error);
+        posts = [];
+    }
+    
     renderPosts();
 }
 
 function renderPosts() {
     const postsFeed = document.getElementById('postsFeed');
     if (!postsFeed) return;
+
+    if (posts.length === 0) {
+        postsFeed.innerHTML = `
+            <div class="empty-feed">
+                <div class="empty-icon">📱</div>
+                <h3>No posts yet</h3>
+                <p>Be the first to share your environmental journey!</p>
+                <button class="auth-btn" onclick="openCamera()" style="max-width: 250px; margin: 20px auto;">
+                    <i class="fas fa-plus"></i> Create Your First Post
+                </button>
+            </div>
+        `;
+        return;
+    }
 
     postsFeed.innerHTML = posts.map(post => `
         <div class="post-card" data-post-id="${post.id}">
@@ -356,6 +1208,15 @@ function toggleLike(postId) {
         // Add heart animation
         if (post.liked) {
             showHeartAnimation();
+            
+            // Simulate notification for post owner (for demo purposes)
+            // In real app, this would be sent from backend when someone likes your post
+            if (currentUser && post.user.name !== currentUser.name) {
+                // This would normally be received by the post owner
+                setTimeout(() => {
+                    notifyPostLike(postId, currentUser.name);
+                }, 1000);
+            }
         }
         
         renderPosts();
@@ -426,15 +1287,174 @@ function openCamera() {
 }
 
 function captureNewPhoto() {
-    // Simulate photo capture
-    showNotification('Camera feature would open here');
-    simulatePhotoSelected();
+    // Check if device supports camera
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Try to open camera using MediaDevices API
+        openCameraStream();
+    } else {
+        // Fallback to file input with camera capture
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.capture = 'environment'; // This tells mobile devices to use camera
+        
+        fileInput.onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handlePhotoSelected(file);
+            }
+        };
+        
+        fileInput.click();
+    }
+}
+
+function openCameraStream() {
+    const preview = document.getElementById('cameraPreview');
+    
+    // Create video element for camera stream
+    preview.innerHTML = `
+        <video id="cameraVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;"></video>
+        <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px;">
+            <button onclick="captureFromStream()" class="camera-btn" style="background: #2ECC71; color: white; border: none; padding: 15px 30px; border-radius: 50px; cursor: pointer; font-weight: 600;">
+                <i class="fas fa-camera"></i> Capture
+            </button>
+            <button onclick="closeCameraStream()" class="camera-btn" style="background: #e74c3c; color: white; border: none; padding: 15px 30px; border-radius: 50px; cursor: pointer; font-weight: 600;">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    `;
+    
+    const video = document.getElementById('cameraVideo');
+    
+    // Request camera access
+    navigator.mediaDevices.getUserMedia({ 
+        video: { 
+            facingMode: 'environment' // Use back camera on mobile
+        } 
+    })
+    .then(function(stream) {
+        window.currentCameraStream = stream;
+        video.srcObject = stream;
+        showNotification('Camera ready! 📸');
+    })
+    .catch(function(error) {
+        console.error('Camera error:', error);
+        showNotification('Camera access denied. Using file picker instead.');
+        closeCameraStream();
+        // Fallback to file input
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.capture = 'environment';
+        fileInput.onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handlePhotoSelected(file);
+            }
+        };
+        fileInput.click();
+    });
+}
+
+function captureFromStream() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convert canvas to blob
+    canvas.toBlob(function(blob) {
+        // Create a file from the blob
+        const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+        
+        // Stop camera stream
+        closeCameraStream();
+        
+        // Handle the captured photo
+        handlePhotoSelected(file);
+    }, 'image/jpeg', 0.95);
+}
+
+function closeCameraStream() {
+    if (window.currentCameraStream) {
+        window.currentCameraStream.getTracks().forEach(track => track.stop());
+        window.currentCameraStream = null;
+    }
+    
+    // Reset preview
+    const preview = document.getElementById('cameraPreview');
+    preview.innerHTML = `
+        <i class="fas fa-camera camera-icon"></i>
+        <p>Tap to capture or upload image</p>
+    `;
 }
 
 function uploadNewPhoto() {
-    // Simulate photo upload
-    showNotification('Gallery feature would open here');
-    simulatePhotoSelected();
+    // Create a file input for gallery selection
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    
+    fileInput.onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            handlePhotoSelected(file);
+        }
+    };
+    
+    fileInput.click();
+}
+
+function handlePhotoSelected(file) {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        showNotification('Please select an image file');
+        return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showNotification('Image size must be less than 5MB');
+        return;
+    }
+    
+    // Read the file and display preview
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        const imageUrl = e.target.result;
+        
+        // Update camera preview
+        const preview = document.getElementById('cameraPreview');
+        preview.innerHTML = `<img src="${imageUrl}" alt="Selected photo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;">`;
+        preview.classList.add('has-image');
+        
+        // Update preview in details step
+        const previewImage = document.querySelector('#previewImage img');
+        previewImage.src = imageUrl;
+        previewImage.style.display = 'block';
+        document.querySelector('.placeholder-preview').style.display = 'none';
+        
+        // Store the image data for later use
+        window.selectedImageData = imageUrl;
+        
+        showNotification('Photo selected! ✨');
+        
+        // Move to details step
+        setTimeout(() => {
+            showCreationStep('detailsStep');
+        }, 500);
+    };
+    
+    reader.onerror = function() {
+        showNotification('Failed to read image file');
+    };
+    
+    reader.readAsDataURL(file);
 }
 
 function simulatePhotoSelected() {
@@ -566,13 +1586,57 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function capturePhoto() {
-    showNotification('Camera feature would open here');
-    nextReportStep();
+    // Check if device supports camera
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Request camera access
+        navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' } 
+        })
+        .then(function(stream) {
+            showNotification('Camera opened! 📸');
+            // In a real implementation, you would show the camera stream
+            // For now, we'll simulate and move to next step
+            stream.getTracks().forEach(track => track.stop());
+            nextReportStep();
+        })
+        .catch(function(error) {
+            console.error('Camera error:', error);
+            showNotification('Camera access denied. Please allow camera access.');
+        });
+    } else {
+        // Fallback to file input
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.capture = 'environment';
+        
+        fileInput.onchange = function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                showNotification('Photo captured! 📸');
+                nextReportStep();
+            }
+        };
+        
+        fileInput.click();
+    }
 }
 
 function uploadPhoto() {
-    showNotification('Gallery feature would open here');
-    nextReportStep();
+    // Create a file input for gallery selection
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    
+    fileInput.onchange = function(e) {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            showNotification('Photo selected! 📷');
+            nextReportStep();
+        }
+    };
+    
+    fileInput.click();
 }
 
 function nextReportStep() {
@@ -607,121 +1671,42 @@ function submitReport() {
 function handleSearch(event) {
     const query = event.target.value.toLowerCase();
     const results = document.getElementById('searchResults');
-    const suggestions = results.querySelector('.search-suggestions');
     
     if (query.length > 0) {
-        // Hide default suggestions and show search results
-        suggestions.style.display = 'none';
+        // Show search in progress message
+        results.innerHTML = `
+            <div class="empty-search">
+                <div class="empty-icon">🔍</div>
+                <h3>Searching...</h3>
+                <p>Looking for users matching "${query}"</p>
+            </div>
+        `;
         
-        // Simulate user search results based on query
-        const searchResults = generateUserSearchResults(query);
-        results.innerHTML = searchResults;
+        // In a real app, you would search the backend API here
+        // For now, show no results since we removed all fake users
+        setTimeout(() => {
+            results.innerHTML = `
+                <div class="empty-search">
+                    <div class="empty-icon">😔</div>
+                    <h3>No users found</h3>
+                    <p>No users match your search. Try a different query.</p>
+                </div>
+            `;
+        }, 500);
     } else {
-        // Show default suggestions
-        suggestions.style.display = 'block';
+        // Show default empty state
         results.innerHTML = `
             <div class="search-suggestions">
                 <div class="suggestion-section">
-                    <h4>👥 Suggested Users</h4>
-                    <div class="suggestion-item" onclick="selectUser('Sarah Johnson')">
-                        <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=50&h=50&fit=crop&crop=face" alt="Sarah" class="suggestion-avatar">
-                        <div>
-                            <div class="suggestion-title">Sarah Johnson</div>
-                            <div class="suggestion-subtitle">Environmental Advocate • 1.2k followers</div>
-                        </div>
-                        <div class="follow-btn">Follow</div>
-                    </div>
-                    <div class="suggestion-item" onclick="selectUser('Mike Chen')">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face" alt="Mike" class="suggestion-avatar">
-                        <div>
-                            <div class="suggestion-title">Mike Chen</div>
-                            <div class="suggestion-subtitle">Cleanup Organizer • 890 followers</div>
-                        </div>
-                        <div class="follow-btn">Follow</div>
-                    </div>
-                    <div class="suggestion-item" onclick="selectUser('Emma Wilson')">
-                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop&crop=face" alt="Emma" class="suggestion-avatar">
-                        <div>
-                            <div class="suggestion-title">Emma Wilson</div>
-                            <div class="suggestion-subtitle">Tree Planting Expert • 654 followers</div>
-                        </div>
-                        <div class="follow-btn">Follow</div>
-                    </div>
-                    <div class="suggestion-item" onclick="selectUser('Alex Rodriguez')">
-                        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face" alt="Alex" class="suggestion-avatar">
-                        <div>
-                            <div class="suggestion-title">Alex Rodriguez</div>
-                            <div class="suggestion-subtitle">Ocean Cleanup Volunteer • 432 followers</div>
-                        </div>
-                        <div class="follow-btn">Follow</div>
-                    </div>
-                    <div class="suggestion-item" onclick="selectUser('Lisa Park')">
-                        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=50&h=50&fit=crop&crop=face" alt="Lisa" class="suggestion-avatar">
-                        <div>
-                            <div class="suggestion-title">Lisa Park</div>
-                            <div class="suggestion-subtitle">Recycling Advocate • 789 followers</div>
-                        </div>
-                        <div class="follow-btn">Follow</div>
-                    </div>
-                    <div class="suggestion-item" onclick="selectUser('David Kim')">
-                        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop&crop=face" alt="David" class="suggestion-avatar">
-                        <div>
-                            <div class="suggestion-title">David Kim</div>
-                            <div class="suggestion-subtitle">Green Energy Enthusiast • 567 followers</div>
-                        </div>
-                        <div class="follow-btn">Follow</div>
+                    <div class="empty-search">
+                        <div class="empty-icon">🔍</div>
+                        <h3>Search for Users</h3>
+                        <p>Start typing to find other GreenConnect members</p>
                     </div>
                 </div>
             </div>
         `;
     }
-}
-
-function generateUserSearchResults(query) {
-    const allUsers = [
-        { name: 'Sarah Johnson', subtitle: 'Environmental Advocate • 1.2k followers', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=50&h=50&fit=crop&crop=face' },
-        { name: 'Mike Chen', subtitle: 'Cleanup Organizer • 890 followers', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face' },
-        { name: 'Emma Wilson', subtitle: 'Tree Planting Expert • 654 followers', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop&crop=face' },
-        { name: 'Alex Rodriguez', subtitle: 'Ocean Cleanup Volunteer • 432 followers', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face' },
-        { name: 'Lisa Park', subtitle: 'Recycling Advocate • 789 followers', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=50&h=50&fit=crop&crop=face' },
-        { name: 'David Kim', subtitle: 'Green Energy Enthusiast • 567 followers', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop&crop=face' },
-        { name: 'Maria Garcia', subtitle: 'Sustainability Expert • 1.5k followers', avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=50&h=50&fit=crop&crop=face' },
-        { name: 'James Wilson', subtitle: 'Climate Activist • 923 followers', avatar: 'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?w=50&h=50&fit=crop&crop=face' },
-    ];
-
-    const matchingUsers = allUsers.filter(user => 
-        user.name.toLowerCase().includes(query) || user.subtitle.toLowerCase().includes(query)
-    );
-
-    let html = '<div class="search-results-content">';
-    
-    if (matchingUsers.length > 0) {
-        html += '<div class="suggestion-section"><h4>👥 Search Results</h4>';
-        matchingUsers.forEach(user => {
-            html += `
-                <div class="suggestion-item" onclick="selectUser('${user.name}')">
-                    <img src="${user.avatar}" alt="${user.name}" class="suggestion-avatar">
-                    <div>
-                        <div class="suggestion-title">${user.name}</div>
-                        <div class="suggestion-subtitle">${user.subtitle}</div>
-                    </div>
-                    <div class="follow-btn">Follow</div>
-                </div>
-            `;
-        });
-        html += '</div>';
-    } else {
-        html += `
-            <div class="no-results">
-                <div class="no-results-icon">🔍</div>
-                <div class="no-results-title">No users found</div>
-                <div class="no-results-subtitle">Try searching for different names or keywords</div>
-            </div>
-        `;
-    }
-    
-    html += '</div>';
-    return html;
 }
 
 function switchSearchTab(tabName) {
@@ -909,6 +1894,333 @@ style.textContent = `
 
 document.head.appendChild(style);
 
+// ==================== NOTIFICATION SYSTEM ====================
+
+// Initialize notification system
+function initNotificationSystem() {
+    // Load notifications from localStorage
+    const saved = localStorage.getItem('notifications');
+    if (saved) {
+        notifications = JSON.parse(saved);
+    }
+    
+    // Update badge count
+    updateNotificationBadge();
+    
+    // Check for nearby issues every 5 minutes
+    if (currentUser) {
+        setInterval(checkNearbyIssues, 5 * 60 * 1000);
+        checkNearbyIssues(); // Initial check
+    }
+}
+
+// Add a new notification
+function addNotification(type, message, data = {}) {
+    const notification = {
+        id: Date.now() + Math.random(),
+        type: type, // 'like', 'comment', 'follow', 'issue', 'event', 'ecopoints'
+        message: message,
+        data: data,
+        timestamp: new Date().toISOString(),
+        read: false
+    };
+    
+    notifications.unshift(notification);
+    
+    // Keep only last 50 notifications
+    if (notifications.length > 50) {
+        notifications = notifications.slice(0, 50);
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+    
+    // Update badge
+    updateNotificationBadge();
+    
+    // Show toast notification if enabled
+    const settings = JSON.parse(localStorage.getItem('notificationSettings') || '{}');
+    if (settings.enableNotifications !== false) {
+        showToastNotification(notification);
+    }
+}
+
+// Update notification badge count
+function updateNotificationBadge() {
+    const badge = document.getElementById('notificationBadge');
+    if (badge) {
+        const unreadCount = notifications.filter(n => !n.read).length;
+        badge.textContent = unreadCount;
+        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+}
+
+// Show toast notification
+function showToastNotification(notification) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    
+    let icon = '';
+    switch(notification.type) {
+        case 'like':
+            icon = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
+            break;
+        case 'comment':
+            icon = '<i class="fas fa-comment" style="color: #3498db;"></i>';
+            break;
+        case 'follow':
+            icon = '<i class="fas fa-user-plus" style="color: #2ECC71;"></i>';
+            break;
+        case 'issue':
+            icon = '<i class="fas fa-exclamation-triangle" style="color: #f39c12;"></i>';
+            break;
+        case 'event':
+            icon = '<i class="fas fa-calendar" style="color: #9b59b6;"></i>';
+            break;
+        case 'ecopoints':
+            icon = '<i class="fas fa-leaf" style="color: #2ECC71;"></i>';
+            break;
+        default:
+            icon = '<i class="fas fa-bell" style="color: #2ECC71;"></i>';
+    }
+    
+    toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">
+            <div class="toast-message">${notification.message}</div>
+            <div class="toast-time">Just now</div>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => toast.classList.add('show'), 100);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+    
+    // Click to dismiss
+    toast.onclick = () => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    };
+}
+
+// Open notifications modal
+function openNotifications() {
+    renderNotifications();
+    const modal = document.getElementById('notificationModal');
+    if (modal) {
+        modal.classList.add('active');
+    }
+    
+    // Mark all as read after a delay
+    setTimeout(() => {
+        notifications.forEach(n => n.read = true);
+        localStorage.setItem('notifications', JSON.stringify(notifications));
+        updateNotificationBadge();
+    }, 1000);
+}
+
+// Render notifications in modal
+function renderNotifications() {
+    const container = document.getElementById('notificationsList');
+    if (!container) return;
+    
+    if (notifications.length === 0) {
+        container.innerHTML = `
+            <div class="empty-notifications">
+                <div class="empty-icon">🔔</div>
+                <h3>No Notifications</h3>
+                <p>You're all caught up! We'll notify you when something happens.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = notifications.map(notif => {
+        let icon = '';
+        let iconClass = '';
+        
+        switch(notif.type) {
+            case 'like':
+                icon = 'fa-heart';
+                iconClass = 'like-icon';
+                break;
+            case 'comment':
+                icon = 'fa-comment';
+                iconClass = 'comment-icon';
+                break;
+            case 'follow':
+                icon = 'fa-user-plus';
+                iconClass = 'follow-icon';
+                break;
+            case 'issue':
+                icon = 'fa-exclamation-triangle';
+                iconClass = 'issue-icon';
+                break;
+            case 'event':
+                icon = 'fa-calendar';
+                iconClass = 'event-icon';
+                break;
+            case 'ecopoints':
+                icon = 'fa-leaf';
+                iconClass = 'ecopoints-icon';
+                break;
+            default:
+                icon = 'fa-bell';
+                iconClass = 'default-icon';
+        }
+        
+        const timeAgo = getTimeAgo(notif.timestamp);
+        
+        return `
+            <div class="notification-item ${notif.read ? 'read' : 'unread'}">
+                <i class="fas ${icon} notification-icon ${iconClass}"></i>
+                <div class="notification-content">
+                    <p>${notif.message}</p>
+                    <span class="notification-time">${timeAgo}</span>
+                </div>
+                ${!notif.read ? '<div class="unread-dot"></div>' : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+// Get time ago string
+function getTimeAgo(timestamp) {
+    const now = new Date();
+    const then = new Date(timestamp);
+    const seconds = Math.floor((now - then) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return `${Math.floor(seconds / 604800)}w ago`;
+}
+
+// Check for nearby issues
+async function checkNearbyIssues() {
+    if (!currentUser) return;
+    
+    // Check if location sharing is enabled
+    const privacySettings = JSON.parse(localStorage.getItem('privacySettings') || '{}');
+    if (privacySettings.shareLocation === false) return;
+    
+    // Check if issue notifications are enabled
+    const notifSettings = JSON.parse(localStorage.getItem('notificationSettings') || '{}');
+    if (notifSettings.issueUpdates === false) return;
+    
+    try {
+        // Get user's location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                
+                // Fetch nearby issues from backend
+                const response = await fetch(`${API_BASE_URL}/issues/nearby?lat=${latitude}&lng=${longitude}&radius=5`, {
+                    headers: authToken ? {
+                        'Authorization': `Bearer ${authToken}`
+                    } : {}
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Check for new issues
+                    const lastCheck = localStorage.getItem('lastIssueCheck');
+                    const newIssues = data.issues.filter(issue => {
+                        return !lastCheck || new Date(issue.createdAt) > new Date(lastCheck);
+                    });
+                    
+                    // Notify about new issues
+                    newIssues.forEach(issue => {
+                        addNotification(
+                            'issue',
+                            `🚨 New environmental issue nearby: ${issue.title}`,
+                            { issueId: issue.id, location: issue.location }
+                        );
+                    });
+                    
+                    // Update last check time
+                    localStorage.setItem('lastIssueCheck', new Date().toISOString());
+                }
+            }, (error) => {
+                console.log('Location access denied:', error);
+            });
+        }
+    } catch (error) {
+        console.error('Error checking nearby issues:', error);
+    }
+}
+
+// Notify when post receives a like
+function notifyPostLike(postId, likerName) {
+    const settings = JSON.parse(localStorage.getItem('notificationSettings') || '{}');
+    if (settings.likesComments === false) return;
+    
+    addNotification(
+        'like',
+        `❤️ ${likerName} liked your post`,
+        { postId: postId }
+    );
+}
+
+// Notify when post receives a comment
+function notifyPostComment(postId, commenterName, comment) {
+    const settings = JSON.parse(localStorage.getItem('notificationSettings') || '{}');
+    if (settings.likesComments === false) return;
+    
+    addNotification(
+        'comment',
+        `💬 ${commenterName} commented: "${comment.substring(0, 50)}${comment.length > 50 ? '...' : ''}"`,
+        { postId: postId }
+    );
+}
+
+// Notify when someone follows
+function notifyNewFollower(followerName) {
+    const settings = JSON.parse(localStorage.getItem('notificationSettings') || '{}');
+    if (settings.newFollowers === false) return;
+    
+    addNotification(
+        'follow',
+        `👤 ${followerName} started following you`,
+        { followerName: followerName }
+    );
+}
+
+// Notify about event reminder
+function notifyEventReminder(eventTitle, eventTime) {
+    const settings = JSON.parse(localStorage.getItem('notificationSettings') || '{}');
+    if (settings.eventReminders === false) return;
+    
+    addNotification(
+        'event',
+        `📅 Reminder: ${eventTitle} starts ${eventTime}`,
+        { eventTitle: eventTitle }
+    );
+}
+
+// Notify when earning eco points
+function notifyEcoPoints(points, reason) {
+    const settings = JSON.parse(localStorage.getItem('notificationSettings') || '{}');
+    if (settings.ecoPoints === false) return;
+    
+    addNotification(
+        'ecopoints',
+        `🍃 You earned ${points} eco points! ${reason}`,
+        { points: points }
+    );
+}
+
+// ==================== END NOTIFICATION SYSTEM ====================
+
 // Close modals when clicking outside
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('modal')) {
@@ -918,3 +2230,532 @@ document.addEventListener('click', function(e) {
 
 // Add smooth scroll behavior
 document.documentElement.style.scrollBehavior = 'smooth';
+
+// ==================== LOCATION & MAP FUNCTIONS ====================
+
+// --- Post Location: Search via Nominatim ---
+let locationSearchTimer = null;
+
+async function searchPostLocation(query) {
+    const suggestionsEl = document.getElementById('locationSuggestions');
+    clearTimeout(locationSearchTimer);
+
+    if (!query || query.length < 2) {
+        suggestionsEl.style.display = 'none';
+        return;
+    }
+
+    locationSearchTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=6&addressdetails=1`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const results = await res.json();
+
+            if (results.length === 0) {
+                suggestionsEl.innerHTML = `<div class="location-item" style="color:#888; cursor:default;"><i class="fas fa-info-circle"></i><div><div class="location-name">No results found</div></div></div>`;
+                suggestionsEl.style.display = 'block';
+                return;
+            }
+
+            suggestionsEl.innerHTML = results.map(r => {
+                const name = r.name || r.display_name.split(',')[0];
+                const address = r.display_name;
+                return `
+                    <div class="location-item" onclick="selectPostLocation('${address.replace(/'/g, "\\'")}', ${r.lat}, ${r.lon})">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div>
+                            <div class="location-name">${name}</div>
+                            <div class="location-address">${address}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+            suggestionsEl.style.display = 'block';
+        } catch (e) {
+            console.error('Location search error:', e);
+        }
+    }, 400);
+}
+
+function selectPostLocation(displayName, lat, lon) {
+    document.getElementById('locationInput').value = displayName;
+    document.getElementById('locationSuggestions').style.display = 'none';
+
+    // Show selected tag
+    document.getElementById('selectedLocationText').textContent = displayName;
+    document.getElementById('selectedLocationDisplay').style.display = 'flex';
+
+    // Store coords
+    window._postLocationLat = lat;
+    window._postLocationLon = lon;
+}
+
+function clearPostLocation() {
+    document.getElementById('locationInput').value = '';
+    document.getElementById('selectedLocationDisplay').style.display = 'none';
+    document.getElementById('locationSuggestions').style.display = 'none';
+    window._postLocationLat = null;
+    window._postLocationLon = null;
+}
+
+function getCurrentLocation() {
+    if (!navigator.geolocation) {
+        showNotification('Geolocation not supported by your browser');
+        return;
+    }
+    showNotification('Getting your location... 📍');
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const data = await res.json();
+            const name = data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+            selectPostLocation(name, latitude, longitude);
+            showNotification('Location set! 📍');
+        } catch (e) {
+            const fallback = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+            selectPostLocation(fallback, latitude, longitude);
+            showNotification('Location set! 📍');
+        }
+    }, () => {
+        showNotification('Could not get your location. Please allow location access.');
+    });
+}
+
+function selectLocation(name) {
+    selectPostLocation(name, null, null);
+}
+
+// --- Post Location Map Modal ---
+let postMap = null;
+let postMapMarker = null;
+let postMapSelectedCoords = null;
+
+function openPostLocationMap() {
+    const modal = document.getElementById('postLocationMapModal');
+    modal.style.display = 'flex';
+
+    setTimeout(() => {
+        if (!postMap) {
+            postMap = L.map('postLeafletMap').setView([20, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(postMap);
+
+            postMap.on('click', async (e) => {
+                const { lat, lng } = e.latlng;
+                if (postMapMarker) postMap.removeLayer(postMapMarker);
+                postMapMarker = L.marker([lat, lng]).addTo(postMap);
+
+                // Reverse geocode
+                try {
+                    const res = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+                        { headers: { 'Accept-Language': 'en' } }
+                    );
+                    const data = await res.json();
+                    const name = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    document.getElementById('mapSelectedLocation').textContent = '📍 ' + name;
+                    postMapSelectedCoords = { lat, lng, name };
+                } catch {
+                    const name = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    document.getElementById('mapSelectedLocation').textContent = '📍 ' + name;
+                    postMapSelectedCoords = { lat, lng, name };
+                }
+            });
+        } else {
+            postMap.invalidateSize();
+        }
+
+        // Center on user if available
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                postMap.setView([pos.coords.latitude, pos.coords.longitude], 14);
+            });
+        }
+    }, 100);
+}
+
+function closePostLocationMap() {
+    document.getElementById('postLocationMapModal').style.display = 'none';
+    document.getElementById('mapSearchResults').innerHTML = '';
+    document.getElementById('mapSearchInput').value = '';
+}
+
+function confirmMapLocation() {
+    if (!postMapSelectedCoords) {
+        showNotification('Please tap on the map to select a location');
+        return;
+    }
+    selectPostLocation(postMapSelectedCoords.name, postMapSelectedCoords.lat, postMapSelectedCoords.lng);
+    closePostLocationMap();
+    showNotification('Location selected! 📍');
+}
+
+function useCurrentLocationOnMap() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+        const { latitude, longitude } = pos.coords;
+        if (postMap) postMap.setView([latitude, longitude], 15);
+    });
+}
+
+let mapSearchTimer2 = null;
+async function searchOnMap(query) {
+    const resultsEl = document.getElementById('mapSearchResults');
+    clearTimeout(mapSearchTimer2);
+    if (!query || query.length < 2) { resultsEl.innerHTML = ''; return; }
+
+    mapSearchTimer2 = setTimeout(async () => {
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const results = await res.json();
+            resultsEl.innerHTML = results.map(r => `
+                <div onclick="flyToOnMap(${r.lat}, ${r.lon}, '${r.display_name.replace(/'/g, "\\'")}')"
+                     style="padding:8px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff; font-size:13px;">
+                    <i class="fas fa-map-marker-alt" style="color:#2ECC71; margin-right:6px;"></i>${r.display_name}
+                </div>`).join('');
+        } catch (e) { resultsEl.innerHTML = ''; }
+    }, 400);
+}
+
+function flyToOnMap(lat, lon, name) {
+    if (postMap) {
+        postMap.setView([lat, lon], 15);
+        if (postMapMarker) postMap.removeLayer(postMapMarker);
+        postMapMarker = L.marker([lat, lon]).addTo(postMap);
+        document.getElementById('mapSelectedLocation').textContent = '📍 ' + name;
+        postMapSelectedCoords = { lat, lng: lon, name };
+    }
+    document.getElementById('mapSearchResults').innerHTML = '';
+    document.getElementById('mapSearchInput').value = name.split(',')[0];
+}
+
+// --- Main Search Map (Leaflet) ---
+let mainMap = null;
+let mainMapTimer = null;
+
+function initMainMap() {
+    if (mainMap) { mainMap.invalidateSize(); return; }
+
+    mainMap = L.map('mainLeafletMap').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(mainMap);
+
+    // Add sample markers
+    const cleanupIcon = L.divIcon({ html: '<div style="background:#2ECC71;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:14px;border:2px solid white;">🧹</div>', className: '', iconSize: [32, 32] });
+    const issueIcon = L.divIcon({ html: '<div style="background:#e74c3c;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:14px;border:2px solid white;">⚠️</div>', className: '', iconSize: [32, 32] });
+
+    L.marker([40.7829, -73.9654], { icon: cleanupIcon }).addTo(mainMap).bindPopup('<b>Beach Cleanup Drive</b><br>Tomorrow 9:00 AM • Central Beach<br><span style="color:#2ECC71">52 joined</span>');
+    L.marker([37.7694, -122.4862], { icon: cleanupIcon }).addTo(mainMap).bindPopup('<b>Tree Planting Event</b><br>Sunday 8:00 AM • Riverside Park<br><span style="color:#2ECC71">28 joined</span>');
+    L.marker([40.7580, -73.9855], { icon: issueIcon }).addTo(mainMap).bindPopup('<b>Plastic Waste Overflow</b><br>Reported 2h ago<br><span style="color:#e74c3c">High Priority</span>');
+    L.marker([40.7282, -74.0776], { icon: issueIcon }).addTo(mainMap).bindPopup('<b>Illegal Dumping Site</b><br>Reported 5h ago<br><span style="color:#f39c12">Medium Priority</span>');
+
+    // Try to center on user
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const { latitude, longitude } = pos.coords;
+            mainMap.setView([latitude, longitude], 13);
+            const userIcon = L.divIcon({ html: '<div style="background:#3498db;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:14px;border:2px solid white;">👤</div>', className: '', iconSize: [32, 32] });
+            L.marker([latitude, longitude], { icon: userIcon }).addTo(mainMap).bindPopup('<b>You are here</b>').openPopup();
+        });
+    }
+}
+
+function centerMapOnUser() {
+    if (!navigator.geolocation) { showNotification('Geolocation not supported'); return; }
+    navigator.geolocation.getCurrentPosition((pos) => {
+        if (mainMap) mainMap.setView([pos.coords.latitude, pos.coords.longitude], 15);
+        showNotification('Centered on your location 📍');
+    }, () => showNotification('Could not get your location'));
+}
+
+let mainMapSearchTimer = null;
+async function searchMainMap(query) {
+    const resultsEl = document.getElementById('searchMapResults');
+    clearTimeout(mainMapSearchTimer);
+    if (!query || query.length < 2) { resultsEl.innerHTML = ''; return; }
+
+    mainMapSearchTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const results = await res.json();
+            resultsEl.innerHTML = results.map(r => `
+                <div onclick="flyToMainMap(${r.lat}, ${r.lon})"
+                     style="padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff; font-size:13px;">
+                    <i class="fas fa-map-marker-alt" style="color:#2ECC71; margin-right:6px;"></i>${r.display_name}
+                </div>`).join('');
+        } catch (e) { resultsEl.innerHTML = ''; }
+    }, 400);
+}
+
+function flyToMainMap(lat, lon) {
+    if (mainMap) mainMap.setView([lat, lon], 14);
+    document.getElementById('searchMapResults').innerHTML = '';
+    document.getElementById('searchMapInput').value = '';
+}
+
+// Init main map when map tab is opened
+const _origSwitchSearchTab = window.switchSearchTab;
+function switchSearchTab(tabName) {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    const tabContents = document.querySelectorAll('.search-tab-content');
+    tabContents.forEach(content => content.classList.remove('active'));
+    document.getElementById(`${tabName}Tab`).classList.add('active');
+
+    if (tabName === 'map') {
+        setTimeout(initMainMap, 100);
+    }
+}
+
+// ==================== END LOCATION & MAP FUNCTIONS ====================
+
+// ==================== REPORT ISSUE LOCATION FUNCTIONS ====================
+
+let reportLocationSearchTimer = null;
+window._reportLocationLat = null;
+window._reportLocationLon = null;
+window._reportLocationName = null;
+
+// Search location via Nominatim
+async function searchReportLocation(query) {
+    const suggestionsEl = document.getElementById('reportLocationSuggestions');
+    clearTimeout(reportLocationSearchTimer);
+
+    if (!query || query.length < 2) {
+        suggestionsEl.style.display = 'none';
+        return;
+    }
+
+    reportLocationSearchTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=6&addressdetails=1`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const results = await res.json();
+
+            if (results.length === 0) {
+                suggestionsEl.innerHTML = `<div style="padding:10px 14px; color:#888; font-size:13px;"><i class="fas fa-info-circle"></i> No results found</div>`;
+                suggestionsEl.style.display = 'block';
+                return;
+            }
+
+            suggestionsEl.innerHTML = results.map(r => {
+                const name = r.name || r.display_name.split(',')[0];
+                const address = r.display_name;
+                return `
+                    <div class="location-item" onclick="selectReportLocation('${address.replace(/'/g, "\\'")}', ${r.lat}, ${r.lon})"
+                         style="display:flex; align-items:flex-start; gap:10px; padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <i class="fas fa-map-marker-alt" style="color:#2ECC71; margin-top:3px; flex-shrink:0;"></i>
+                        <div>
+                            <div style="font-size:14px; color:#fff; font-weight:600;">${name}</div>
+                            <div style="font-size:12px; color:#888; margin-top:2px; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${address}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+            suggestionsEl.style.display = 'block';
+        } catch (e) {
+            console.error('Report location search error:', e);
+        }
+    }, 400);
+}
+
+function selectReportLocation(displayName, lat, lon) {
+    document.getElementById('reportLocationInput').value = displayName;
+    document.getElementById('reportLocationSuggestions').style.display = 'none';
+    document.getElementById('reportSelectedLocationText').textContent = displayName;
+    document.getElementById('reportSelectedLocationDisplay').style.display = 'flex';
+    window._reportLocationLat = lat;
+    window._reportLocationLon = lon;
+    window._reportLocationName = displayName;
+}
+
+function clearReportLocation() {
+    document.getElementById('reportLocationInput').value = '';
+    document.getElementById('reportLocationSuggestions').style.display = 'none';
+    document.getElementById('reportSelectedLocationDisplay').style.display = 'none';
+    window._reportLocationLat = null;
+    window._reportLocationLon = null;
+    window._reportLocationName = null;
+}
+
+function getReportCurrentLocation() {
+    if (!navigator.geolocation) {
+        showNotification('Geolocation not supported by your browser');
+        return;
+    }
+    showNotification('Getting your location... 📍');
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const data = await res.json();
+            const name = data.display_name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+            selectReportLocation(name, latitude, longitude);
+            showNotification('Location set! 📍');
+        } catch (e) {
+            const fallback = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+            selectReportLocation(fallback, latitude, longitude);
+            showNotification('Location set! 📍');
+        }
+    }, () => {
+        showNotification('Could not get your location. Please allow location access.');
+    });
+}
+
+// --- Report Location Map ---
+let reportMap = null;
+let reportMapMarker = null;
+let reportMapSelectedCoords = null;
+
+function openReportLocationMap() {
+    const modal = document.getElementById('reportLocationMapModal');
+    modal.style.display = 'flex';
+
+    setTimeout(() => {
+        if (!reportMap) {
+            reportMap = L.map('reportLeafletMap').setView([20, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(reportMap);
+
+            reportMap.on('click', async (e) => {
+                const { lat, lng } = e.latlng;
+                if (reportMapMarker) reportMap.removeLayer(reportMapMarker);
+
+                // Red marker for issue location
+                const redIcon = L.divIcon({
+                    html: '<div style="background:#e74c3c;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;border:2px solid white;">⚠️</div>',
+                    className: '', iconSize: [32, 32]
+                });
+                reportMapMarker = L.marker([lat, lng], { icon: redIcon }).addTo(reportMap);
+
+                try {
+                    const res = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+                        { headers: { 'Accept-Language': 'en' } }
+                    );
+                    const data = await res.json();
+                    const name = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    document.getElementById('reportMapSelectedLocation').textContent = '📍 ' + name;
+                    reportMapSelectedCoords = { lat, lng, name };
+                } catch {
+                    const name = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    document.getElementById('reportMapSelectedLocation').textContent = '📍 ' + name;
+                    reportMapSelectedCoords = { lat, lng, name };
+                }
+            });
+        } else {
+            reportMap.invalidateSize();
+        }
+
+        // Center on user
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                reportMap.setView([pos.coords.latitude, pos.coords.longitude], 14);
+            });
+        }
+    }, 100);
+}
+
+function closeReportLocationMap() {
+    document.getElementById('reportLocationMapModal').style.display = 'none';
+    document.getElementById('reportMapSearchResults').innerHTML = '';
+    document.getElementById('reportMapSearchInput').value = '';
+}
+
+function confirmReportMapLocation() {
+    if (!reportMapSelectedCoords) {
+        showNotification('Please tap on the map to pin the issue location');
+        return;
+    }
+    selectReportLocation(reportMapSelectedCoords.name, reportMapSelectedCoords.lat, reportMapSelectedCoords.lng);
+    closeReportLocationMap();
+    showNotification('Issue location set! 📍');
+}
+
+function useCurrentLocationOnReportMap() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+        if (reportMap) reportMap.setView([pos.coords.latitude, pos.coords.longitude], 15);
+    });
+}
+
+let reportMapSearchTimer = null;
+async function searchOnReportMap(query) {
+    const resultsEl = document.getElementById('reportMapSearchResults');
+    clearTimeout(reportMapSearchTimer);
+    if (!query || query.length < 2) { resultsEl.innerHTML = ''; return; }
+
+    reportMapSearchTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const results = await res.json();
+            resultsEl.innerHTML = results.map(r => `
+                <div onclick="flyToOnReportMap(${r.lat}, ${r.lon}, '${r.display_name.replace(/'/g, "\\'")}')"
+                     style="padding:8px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff; font-size:13px;">
+                    <i class="fas fa-map-marker-alt" style="color:#e74c3c; margin-right:6px;"></i>${r.display_name}
+                </div>`).join('');
+        } catch (e) { resultsEl.innerHTML = ''; }
+    }, 400);
+}
+
+function flyToOnReportMap(lat, lon, name) {
+    if (reportMap) {
+        reportMap.setView([lat, lon], 15);
+        if (reportMapMarker) reportMap.removeLayer(reportMapMarker);
+        const redIcon = L.divIcon({
+            html: '<div style="background:#e74c3c;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;border:2px solid white;">⚠️</div>',
+            className: '', iconSize: [32, 32]
+        });
+        reportMapMarker = L.marker([lat, lon], { icon: redIcon }).addTo(reportMap);
+        document.getElementById('reportMapSelectedLocation').textContent = '📍 ' + name;
+        reportMapSelectedCoords = { lat, lng: lon, name };
+    }
+    document.getElementById('reportMapSearchResults').innerHTML = '';
+    document.getElementById('reportMapSearchInput').value = name.split(',')[0];
+}
+
+// Override submitReport to include location
+const _origSubmitReport = window.submitReport;
+function submitReport() {
+    const locationName = window._reportLocationName;
+    if (!locationName) {
+        showNotification('Please add the location of the issue 📍');
+        return;
+    }
+    showNotification(`Report submitted! 🎉 Location: ${locationName.split(',')[0]}`);
+
+    // Notify nearby users (simulate)
+    addNotification('issue', `⚠️ New issue reported near ${locationName.split(',')[0]}`, {});
+
+    // Reset
+    reportStep = 1;
+    const steps = document.querySelectorAll('.step');
+    steps.forEach(step => step.classList.remove('active'));
+    document.getElementById('step1').classList.add('active');
+    clearReportLocation();
+    document.getElementById('issueDescription').value = '';
+}
+
+// ==================== END REPORT ISSUE LOCATION FUNCTIONS ====================

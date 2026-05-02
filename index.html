@@ -6,6 +6,8 @@
     <title>GreenConnect - Smart Clean & Green Community Platform</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -77,10 +79,18 @@
                 </button>
                 <button class="notification-btn" onclick="openNotifications()">
                     <i class="fas fa-bell"></i>
-                    <span class="notification-badge">3</span>
+                    <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
                 </button>
             </div>
         </header>
+
+        <!-- Pull to Refresh Indicator -->
+        <div class="pull-to-refresh-indicator" id="pullToRefreshIndicator">
+            <div class="refresh-spinner">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+            <span class="refresh-text">Pull to refresh</span>
+        </div>
 
         <!-- Main Content Area -->
         <main class="main-content" id="mainContent">
@@ -95,36 +105,6 @@
                                     <i class="fas fa-plus"></i>
                                 </div>
                                 <span class="story-username">Your Story</span>
-                            </div>
-                            <div class="story-item" onclick="viewStory('sarah')">
-                                <div class="story-avatar">
-                                    <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&h=60&fit=crop&crop=face" alt="Sarah">
-                                </div>
-                                <span class="story-username">Sarah</span>
-                            </div>
-                            <div class="story-item" onclick="viewStory('mike')">
-                                <div class="story-avatar">
-                                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&crop=face" alt="Mike">
-                                </div>
-                                <span class="story-username">Mike</span>
-                            </div>
-                            <div class="story-item" onclick="viewStory('emma')">
-                                <div class="story-avatar">
-                                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60&h=60&fit=crop&crop=face" alt="Emma">
-                                </div>
-                                <span class="story-username">Emma</span>
-                            </div>
-                            <div class="story-item" onclick="viewStory('alex')">
-                                <div class="story-avatar">
-                                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face" alt="Alex">
-                                </div>
-                                <span class="story-username">Alex</span>
-                            </div>
-                            <div class="story-item" onclick="viewStory('lisa')">
-                                <div class="story-avatar">
-                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=60&h=60&fit=crop&crop=face" alt="Lisa">
-                                </div>
-                                <span class="story-username">Lisa</span>
                             </div>
                         </div>
                     </div>
@@ -179,57 +159,13 @@
                     <!-- Users Tab -->
                     <div class="search-tab-content active" id="usersTab">
                         <div class="search-results" id="searchResults">
-                            <!-- Default user suggestions -->
+                            <!-- Search results will appear here -->
                             <div class="search-suggestions">
                                 <div class="suggestion-section">
-                                    <h4>👥 Suggested Users</h4>
-                                    <div class="suggestion-item" onclick="selectUser('Sarah Johnson')">
-                                        <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=50&h=50&fit=crop&crop=face" alt="Sarah" class="suggestion-avatar">
-                                        <div>
-                                            <div class="suggestion-name">Sarah Johnson</div>
-                                            <div class="suggestion-subtitle">Environmental Advocate • 1.2k followers</div>
-                                        </div>
-                                        <div class="follow-btn">Follow</div>
-                                    </div>
-                                    <div class="suggestion-item" onclick="selectUser('Mike Chen')">
-                                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face" alt="Mike" class="suggestion-avatar">
-                                        <div>
-                                            <div class="suggestion-name">Mike Chen</div>
-                                            <div class="suggestion-subtitle">Cleanup Organizer • 890 followers</div>
-                                        </div>
-                                        <div class="follow-btn">Follow</div>
-                                    </div>
-                                    <div class="suggestion-item" onclick="selectUser('Emma Wilson')">
-                                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop&crop=face" alt="Emma" class="suggestion-avatar">
-                                        <div>
-                                            <div class="suggestion-name">Emma Wilson</div>
-                                            <div class="suggestion-subtitle">Tree Planting Expert • 654 followers</div>
-                                        </div>
-                                        <div class="follow-btn">Follow</div>
-                                    </div>
-                                    <div class="suggestion-item" onclick="selectUser('Alex Rodriguez')">
-                                        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face" alt="Alex" class="suggestion-avatar">
-                                        <div>
-                                            <div class="suggestion-name">Alex Rodriguez</div>
-                                            <div class="suggestion-subtitle">Ocean Cleanup Volunteer • 432 followers</div>
-                                        </div>
-                                        <div class="follow-btn">Follow</div>
-                                    </div>
-                                    <div class="suggestion-item" onclick="selectUser('Lisa Park')">
-                                        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=50&h=50&fit=crop&crop=face" alt="Lisa" class="suggestion-avatar">
-                                        <div>
-                                            <div class="suggestion-name">Lisa Park</div>
-                                            <div class="suggestion-subtitle">Recycling Advocate • 789 followers</div>
-                                        </div>
-                                        <div class="follow-btn">Follow</div>
-                                    </div>
-                                    <div class="suggestion-item" onclick="selectUser('David Kim')">
-                                        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop&crop=face" alt="David" class="suggestion-avatar">
-                                        <div>
-                                            <div class="suggestion-name">David Kim</div>
-                                            <div class="suggestion-subtitle">Green Energy Enthusiast • 567 followers</div>
-                                        </div>
-                                        <div class="follow-btn">Follow</div>
+                                    <div class="empty-search">
+                                        <div class="empty-icon">🔍</div>
+                                        <h3>Search for Users</h3>
+                                        <p>Start typing to find other GreenConnect members</p>
                                     </div>
                                 </div>
                             </div>
@@ -241,6 +177,11 @@
                         <div class="map-container">
                             <div class="map-header">
                                 <h3>🗺️ Nearby Activities & Issues</h3>
+                                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                                    <input type="text" id="searchMapInput" placeholder="Search a location..." style="flex:1; padding:10px 14px; background:rgba(46,204,113,0.1); border:1px solid rgba(46,204,113,0.2); border-radius:10px; color:#fff; font-size:14px; outline:none;" oninput="searchMainMap(this.value)">
+                                    <button onclick="centerMapOnUser()" style="padding:10px 14px; background:rgba(46,204,113,0.2); border:1px solid rgba(46,204,113,0.3); border-radius:10px; color:#2ECC71; cursor:pointer; font-size:13px; white-space:nowrap;"><i class="fas fa-crosshairs"></i> Me</button>
+                                </div>
+                                <div id="searchMapResults" style="max-height:130px; overflow-y:auto; margin-bottom:8px; border-radius:10px; background:rgba(26,26,26,0.9);"></div>
                                 <div class="map-legend">
                                     <div class="legend-item">
                                         <span class="legend-dot cleanup"></span>
@@ -252,36 +193,9 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="map-view" id="mapView">
-                                <div class="map-placeholder">
-                                    <i class="fas fa-map-marked-alt"></i>
-                                    <p>Interactive Map</p>
-                                    <small>Showing your current location</small>
-                                </div>
-                                
-                                <!-- Map Markers -->
-                                <div class="map-marker cleanup-marker" style="top: 30%; left: 25%;" onclick="showMarkerInfo('cleanup1')">
-                                    <i class="fas fa-broom"></i>
-                                    <div class="marker-pulse"></div>
-                                </div>
-                                <div class="map-marker cleanup-marker" style="top: 60%; left: 70%;" onclick="showMarkerInfo('cleanup2')">
-                                    <i class="fas fa-seedling"></i>
-                                    <div class="marker-pulse"></div>
-                                </div>
-                                <div class="map-marker issue-marker" style="top: 45%; left: 40%;" onclick="showMarkerInfo('issue1')">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <div class="marker-pulse"></div>
-                                </div>
-                                <div class="map-marker issue-marker" style="top: 75%; left: 55%;" onclick="showMarkerInfo('issue2')">
-                                    <i class="fas fa-trash"></i>
-                                    <div class="marker-pulse"></div>
-                                </div>
-                                <div class="map-marker user-location" style="top: 50%; left: 50%;">
-                                    <i class="fas fa-user"></i>
-                                    <div class="location-pulse"></div>
-                                </div>
-                            </div>
-                            
+                            <!-- Real Leaflet Map -->
+                            <div id="mainLeafletMap" style="height:320px; width:100%; border-radius:15px; overflow:hidden; border:1px solid rgba(46,204,113,0.2); margin-bottom:20px;"></div>
+
                             <!-- Map Info Cards -->
                             <div class="map-info-cards">
                                 <div class="info-card">
@@ -295,7 +209,6 @@
                                     </div>
                                     <button class="join-btn">Join</button>
                                 </div>
-                                
                                 <div class="info-card">
                                     <div class="card-icon cleanup">
                                         <i class="fas fa-seedling"></i>
@@ -307,7 +220,6 @@
                                     </div>
                                     <button class="join-btn">Join</button>
                                 </div>
-                                
                                 <div class="info-card">
                                     <div class="card-icon issue">
                                         <i class="fas fa-exclamation-triangle"></i>
@@ -319,7 +231,6 @@
                                     </div>
                                     <button class="view-btn">View</button>
                                 </div>
-                                
                                 <div class="info-card">
                                     <div class="card-icon issue">
                                         <i class="fas fa-trash"></i>
@@ -387,13 +298,48 @@
                                     <textarea id="issueDescription" placeholder="Describe the issue..."></textarea>
                                 </div>
                                 <div class="form-group">
-                                    <label>Location</label>
-                                    <div class="location-input">
+                                    <label>📍 Location of Issue</label>
+                                    <div class="location-search" style="margin-bottom:6px;">
+                                        <input type="text" id="reportLocationInput" placeholder="Search for location..." autocomplete="off" oninput="searchReportLocation(this.value)">
+                                        <button class="location-btn" onclick="getReportCurrentLocation()" title="Use current location">
+                                            <i class="fas fa-crosshairs"></i>
+                                        </button>
+                                        <button class="location-btn" onclick="openReportLocationMap()" title="Pick on map" style="background:rgba(52,152,219,0.2); border-color:rgba(52,152,219,0.4); color:#3498db;">
+                                            <i class="fas fa-map"></i>
+                                        </button>
+                                    </div>
+                                    <!-- Search results dropdown -->
+                                    <div id="reportLocationSuggestions" style="display:none; background:rgba(26,26,26,0.98); border:1px solid rgba(46,204,113,0.2); border-radius:10px; max-height:180px; overflow-y:auto; margin-bottom:6px;"></div>
+                                    <!-- Selected location display -->
+                                    <div id="reportSelectedLocationDisplay" style="display:none;" class="selected-location-tag">
                                         <i class="fas fa-map-marker-alt"></i>
-                                        <span>Current Location (Auto-detected)</span>
+                                        <span id="reportSelectedLocationText"></span>
+                                        <button onclick="clearReportLocation()" style="background:none;border:none;color:#e74c3c;cursor:pointer;margin-left:auto;font-size:16px;">&times;</button>
                                     </div>
                                 </div>
                                 <button class="submit-btn" onclick="submitReport()">Submit Report</button>
+                            </div>
+                        </div>
+
+                        <!-- Report Location Map Modal -->
+                        <div id="reportLocationMapModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center;">
+                            <div style="background:#1a1a1a; border-radius:20px; width:95%; max-width:500px; overflow:hidden; border:1px solid rgba(46,204,113,0.2);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; border-bottom:1px solid rgba(46,204,113,0.1);">
+                                    <h3 style="color:#2ECC71; margin:0;">📍 Pick Issue Location</h3>
+                                    <button onclick="closeReportLocationMap()" style="background:none;border:none;color:#888;font-size:22px;cursor:pointer;">&times;</button>
+                                </div>
+                                <div style="padding:12px 15px;">
+                                    <div style="display:flex; gap:8px; margin-bottom:10px;">
+                                        <input type="text" id="reportMapSearchInput" placeholder="Search location on map..." style="flex:1; padding:10px 14px; background:rgba(46,204,113,0.1); border:1px solid rgba(46,204,113,0.2); border-radius:10px; color:#fff; font-size:14px; outline:none;" oninput="searchOnReportMap(this.value)">
+                                        <button onclick="useCurrentLocationOnReportMap()" style="padding:10px 14px; background:rgba(46,204,113,0.2); border:1px solid rgba(46,204,113,0.3); border-radius:10px; color:#2ECC71; cursor:pointer; font-size:13px; white-space:nowrap;"><i class="fas fa-crosshairs"></i> Me</button>
+                                    </div>
+                                    <div id="reportMapSearchResults" style="max-height:120px; overflow-y:auto; margin-bottom:8px; border-radius:10px; background:rgba(26,26,26,0.9);"></div>
+                                </div>
+                                <div id="reportLeafletMap" style="height:300px; width:100%;"></div>
+                                <div style="padding:12px 15px; border-top:1px solid rgba(46,204,113,0.1);">
+                                    <div id="reportMapSelectedLocation" style="color:#888; font-size:13px; margin-bottom:10px;">Tap on the map to pin the issue location</div>
+                                    <button onclick="confirmReportMapLocation()" style="width:100%; padding:12px; background:linear-gradient(135deg,#2ECC71,#27AE60); border:none; border-radius:10px; color:white; font-weight:600; cursor:pointer; font-size:15px;">✓ Confirm Location</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -489,52 +435,8 @@
 
             <!-- Profile Screen -->
             <div class="screen" id="profileScreen">
-                <div class="profile-container">
-                    <div class="profile-header">
-                        <div class="profile-avatar">
-                            <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face" alt="Profile">
-                        </div>
-                        <h2>Sarah Johnson</h2>
-                        <p class="profile-bio">Environmental advocate 🌱 | Making our planet greener</p>
-                    </div>
-                    
-                    <div class="profile-stats">
-                        <div class="stat-item">
-                            <span class="stat-number">1,250</span>
-                            <span class="stat-label">Points</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">23</span>
-                            <span class="stat-label">Reports</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">8</span>
-                            <span class="stat-label">Drives</span>
-                        </div>
-                    </div>
-
-                    <div class="achievements-section">
-                        <h3>🏆 Achievements</h3>
-                        <div class="achievements-grid">
-                            <div class="achievement-badge earned">
-                                <i class="fas fa-camera"></i>
-                                <span>First Reporter</span>
-                            </div>
-                            <div class="achievement-badge earned">
-                                <i class="fas fa-leaf"></i>
-                                <span>Eco Warrior</span>
-                            </div>
-                            <div class="achievement-badge">
-                                <i class="fas fa-users"></i>
-                                <span>Community Leader</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="profile-actions">
-                        <button class="profile-btn">Edit Profile</button>
-                        <button class="profile-btn">Settings</button>
-                    </div>
+                <div class="profile-container" id="profileContainer">
+                    <!-- Content will be dynamically loaded based on auth status -->
                 </div>
             </div>
         </main>
@@ -626,33 +528,43 @@
                                             <span>Add Location</span>
                                         </div>
                                         <div class="location-search">
-                                            <input type="text" id="locationInput" placeholder="Search locations...">
-                                            <button class="location-btn" onclick="getCurrentLocation()">
+                                            <input type="text" id="locationInput" placeholder="Search for a location..." autocomplete="off" oninput="searchPostLocation(this.value)">
+                                            <button class="location-btn" onclick="getCurrentLocation()" title="Use current location">
                                                 <i class="fas fa-crosshairs"></i>
                                             </button>
+                                            <button class="location-btn" onclick="openPostLocationMap()" title="Pick on map" style="background: rgba(52,152,219,0.2); border-color: rgba(52,152,219,0.4); color:#3498db;">
+                                                <i class="fas fa-map"></i>
+                                            </button>
                                         </div>
-                                        <div class="location-suggestions" id="locationSuggestions">
-                                            <div class="location-item" onclick="selectLocation('Central Park, NYC')">
-                                                <i class="fas fa-map-marker-alt"></i>
-                                                <div>
-                                                    <div class="location-name">Central Park</div>
-                                                    <div class="location-address">New York, NY</div>
-                                                </div>
+                                        <!-- Search results dropdown -->
+                                        <div class="location-suggestions" id="locationSuggestions" style="display:none;"></div>
+                                        <!-- Selected location display -->
+                                        <div id="selectedLocationDisplay" style="display:none;" class="selected-location-tag">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <span id="selectedLocationText"></span>
+                                            <button onclick="clearPostLocation()" style="background:none;border:none;color:#e74c3c;cursor:pointer;margin-left:auto;font-size:16px;">&times;</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Post Location Map Modal (inline) -->
+                                <div id="postLocationMapModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; display:none; align-items:center; justify-content:center;">
+                                    <div style="background:#1a1a1a; border-radius:20px; width:95%; max-width:500px; overflow:hidden; border:1px solid rgba(46,204,113,0.2);">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; border-bottom:1px solid rgba(46,204,113,0.1);">
+                                            <h3 style="color:#2ECC71; margin:0;">📍 Pick Location on Map</h3>
+                                            <button onclick="closePostLocationMap()" style="background:none;border:none;color:#888;font-size:22px;cursor:pointer;">&times;</button>
+                                        </div>
+                                        <div style="padding:12px 15px;">
+                                            <div style="display:flex; gap:8px; margin-bottom:10px;">
+                                                <input type="text" id="mapSearchInput" placeholder="Search location on map..." style="flex:1; padding:10px 14px; background:rgba(46,204,113,0.1); border:1px solid rgba(46,204,113,0.2); border-radius:10px; color:#fff; font-size:14px; outline:none;" oninput="searchOnMap(this.value)">
+                                                <button onclick="useCurrentLocationOnMap()" style="padding:10px 14px; background:rgba(46,204,113,0.2); border:1px solid rgba(46,204,113,0.3); border-radius:10px; color:#2ECC71; cursor:pointer; font-size:13px; white-space:nowrap;"><i class="fas fa-crosshairs"></i> Me</button>
                                             </div>
-                                            <div class="location-item" onclick="selectLocation('Times Square, NYC')">
-                                                <i class="fas fa-map-marker-alt"></i>
-                                                <div>
-                                                    <div class="location-name">Times Square</div>
-                                                    <div class="location-address">New York, NY</div>
-                                                </div>
-                                            </div>
-                                            <div class="location-item" onclick="selectLocation('Brooklyn Bridge, NYC')">
-                                                <i class="fas fa-map-marker-alt"></i>
-                                                <div>
-                                                    <div class="location-name">Brooklyn Bridge</div>
-                                                    <div class="location-address">New York, NY</div>
-                                                </div>
-                                            </div>
+                                            <div id="mapSearchResults" style="max-height:120px; overflow-y:auto; margin-bottom:8px;"></div>
+                                        </div>
+                                        <div id="postLeafletMap" style="height:300px; width:100%;"></div>
+                                        <div style="padding:12px 15px; border-top:1px solid rgba(46,204,113,0.1);">
+                                            <div id="mapSelectedLocation" style="color:#888; font-size:13px; margin-bottom:10px;">Tap on the map to select a location</div>
+                                            <button onclick="confirmMapLocation()" style="width:100%; padding:12px; background:linear-gradient(135deg,#2ECC71,#27AE60); border:none; border-radius:10px; color:white; font-weight:600; cursor:pointer; font-size:15px;">✓ Confirm Location</button>
                                         </div>
                                     </div>
                                 </div>
@@ -689,20 +601,498 @@
                     <h3>Notifications</h3>
                     <button class="close-btn" onclick="closeModal('notificationModal')">&times;</button>
                 </div>
-                <div class="notifications-list">
-                    <div class="notification-item">
-                        <i class="fas fa-heart notification-icon"></i>
-                        <div class="notification-content">
-                            <p>Your post received 15 new likes</p>
-                            <span class="notification-time">2 hours ago</span>
+                <div class="notifications-list" id="notificationsList">
+                    <!-- Notifications will be dynamically loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Login/Signup Modal -->
+        <div class="modal" id="authModal">
+            <div class="modal-content auth-modal">
+                <div class="modal-header">
+                    <button class="close-btn" onclick="closeModal('authModal')">&times;</button>
+                    <h3 id="authModalTitle">Welcome to GreenConnect</h3>
+                </div>
+                
+                <div class="auth-tabs">
+                    <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+                    <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+                </div>
+                
+                <!-- Login Form -->
+                <div class="auth-form active" id="loginForm">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="loginEmail" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter your password" required>
+                    </div>
+                    <button class="auth-btn" onclick="handleLogin()">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                    <p class="auth-hint">Test account: sarah@greenconnect.com / password123</p>
+                </div>
+                
+                <!-- Signup Form -->
+                <div class="auth-form" id="signupForm">
+                    <!-- Step 1: Basic Info + Email -->
+                    <div id="signupStep1">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="signupName" placeholder="Enter your full name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <div style="display:flex; gap:8px;">
+                                <input type="email" id="signupEmail" placeholder="Enter your email" required style="flex:1;">
+                                <button type="button" class="verify-email-btn" id="sendCodeBtn" onclick="sendVerificationCode()">
+                                    Send Code
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group" id="verificationCodeGroup" style="display:none;">
+                            <label>Verification Code</label>
+                            <div style="display:flex; gap:8px;">
+                                <input type="text" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6" style="flex:1; letter-spacing:4px; font-size:18px; text-align:center;">
+                                <button type="button" class="verify-email-btn" onclick="confirmVerificationCode()" id="confirmCodeBtn">Confirm</button>
+                                <button type="button" class="verify-email-btn" onclick="sendVerificationCode()" style="white-space:nowrap;">Resend</button>
+                            </div>
+                            <small id="verificationStatus" style="margin-top:6px; display:block;"></small>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="signupPassword" placeholder="Create a password (min 6 characters)" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Bio (Optional)</label>
+                            <textarea id="signupBio" placeholder="Tell us about yourself..." rows="3"></textarea>
+                        </div>
+                        <button class="auth-btn" onclick="handleSignup()">
+                            <i class="fas fa-user-plus"></i> Create Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile Modal -->
+        <div class="modal" id="editProfileModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Profile</h3>
+                    <button class="close-btn" onclick="closeModal('editProfileModal')">&times;</button>
+                </div>
+                <div class="edit-profile-form">
+                    <!-- Profile Picture Section -->
+                    <div class="form-group">
+                        <label>Profile Picture</label>
+                        <div class="profile-picture-upload">
+                            <div class="profile-picture-preview" id="profilePicturePreview">
+                                <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face" alt="Profile" id="profilePreviewImage">
+                                <div class="upload-overlay">
+                                    <i class="fas fa-camera"></i>
+                                </div>
+                            </div>
+                            <div class="profile-picture-buttons">
+                                <button type="button" class="upload-btn" onclick="openProfileCamera()">
+                                    <i class="fas fa-camera"></i> Take Photo
+                                </button>
+                                <button type="button" class="upload-btn" onclick="openProfileGallery()">
+                                    <i class="fas fa-image"></i> Choose from Gallery
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="notification-item">
-                        <i class="fas fa-check-circle notification-icon"></i>
-                        <div class="notification-content">
-                            <p>Your reported issue has been resolved</p>
-                            <span class="notification-time">1 day ago</span>
+                    
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="editName" placeholder="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="editEmail" placeholder="Your email" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Bio</label>
+                        <textarea id="editBio" placeholder="Tell us about yourself..." rows="3"></textarea>
+                    </div>
+                    <button class="auth-btn" onclick="saveProfile()">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="modal" id="settingsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Settings</h3>
+                    <button class="close-btn" onclick="closeModal('settingsModal')">&times;</button>
+                </div>
+                <div class="settings-list">
+                    <div class="setting-item" onclick="toggleTheme()">
+                        <div class="setting-icon"><i class="fas fa-moon"></i></div>
+                        <div class="setting-info">
+                            <div class="setting-title">Dark Mode</div>
+                            <div class="setting-subtitle">Toggle dark/light theme</div>
                         </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    <div class="setting-item" onclick="openNotificationSettings()">
+                        <div class="setting-icon"><i class="fas fa-bell"></i></div>
+                        <div class="setting-info">
+                            <div class="setting-title">Notifications</div>
+                            <div class="setting-subtitle">Manage notification preferences</div>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    <div class="setting-item" onclick="openPrivacySettings()">
+                        <div class="setting-icon"><i class="fas fa-lock"></i></div>
+                        <div class="setting-info">
+                            <div class="setting-title">Privacy</div>
+                            <div class="setting-subtitle">Control your privacy settings</div>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    <div class="setting-item" onclick="openAboutApp()">
+                        <div class="setting-icon"><i class="fas fa-info-circle"></i></div>
+                        <div class="setting-info">
+                            <div class="setting-title">About</div>
+                            <div class="setting-subtitle">App version and info</div>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    <div class="setting-item logout-item" onclick="logout()">
+                        <div class="setting-icon"><i class="fas fa-sign-out-alt"></i></div>
+                        <div class="setting-info">
+                            <div class="setting-title">Logout</div>
+                            <div class="setting-subtitle">Sign out of your account</div>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Settings Modal -->
+        <div class="modal" id="notificationSettingsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button class="close-btn" onclick="closeModal('notificationSettingsModal')">&times;</button>
+                    <h3>Notification Settings</h3>
+                </div>
+                <div class="settings-list">
+                    <div class="setting-category">
+                        <h4>Push Notifications</h4>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Enable Notifications</div>
+                                <div class="setting-subtitle">Receive push notifications</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="enableNotifications" checked onchange="toggleNotificationSetting('enableNotifications')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-category">
+                        <h4>Activity Notifications</h4>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Likes & Comments</div>
+                                <div class="setting-subtitle">When someone likes or comments on your posts</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="likesComments" checked onchange="toggleNotificationSetting('likesComments')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">New Followers</div>
+                                <div class="setting-subtitle">When someone follows you</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="newFollowers" checked onchange="toggleNotificationSetting('newFollowers')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-category">
+                        <h4>Community Notifications</h4>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Event Reminders</div>
+                                <div class="setting-subtitle">Reminders for upcoming cleanup events</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="eventReminders" checked onchange="toggleNotificationSetting('eventReminders')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Issue Updates</div>
+                                <div class="setting-subtitle">Updates on reported environmental issues</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="issueUpdates" checked onchange="toggleNotificationSetting('issueUpdates')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Eco Points</div>
+                                <div class="setting-subtitle">When you earn eco points</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="ecoPoints" checked onchange="toggleNotificationSetting('ecoPoints')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-category">
+                        <h4>Email Notifications</h4>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Weekly Summary</div>
+                                <div class="setting-subtitle">Weekly email with your activity summary</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="weeklySummary" onchange="toggleNotificationSetting('weeklySummary')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Newsletter</div>
+                                <div class="setting-subtitle">Environmental tips and community news</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="newsletter" onchange="toggleNotificationSetting('newsletter')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Privacy Settings Modal -->
+        <div class="modal" id="privacySettingsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button class="close-btn" onclick="closeModal('privacySettingsModal')">&times;</button>
+                    <h3>Privacy Settings</h3>
+                </div>
+                <div class="settings-list">
+                    <div class="setting-category">
+                        <h4>Account Privacy</h4>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Private Account</div>
+                                <div class="setting-subtitle">Only approved followers can see your posts</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="privateAccount" onchange="togglePrivacySetting('privateAccount')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-category">
+                        <h4>Activity Status</h4>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Show Activity Status</div>
+                                <div class="setting-subtitle">Let others see when you're active</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="activityStatus" checked onchange="togglePrivacySetting('activityStatus')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-category">
+                        <h4>Location</h4>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Share Location</div>
+                                <div class="setting-subtitle">Allow location sharing in posts and reports</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="shareLocation" checked onchange="togglePrivacySetting('shareLocation')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Precise Location</div>
+                                <div class="setting-subtitle">Share exact location instead of approximate</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="preciseLocation" onchange="togglePrivacySetting('preciseLocation')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-category">
+                        <h4>Posts & Stories</h4>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Allow Comments</div>
+                                <div class="setting-subtitle">Let others comment on your posts</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="allowComments" checked onchange="togglePrivacySetting('allowComments')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Allow Sharing</div>
+                                <div class="setting-subtitle">Let others share your posts</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="allowSharing" checked onchange="togglePrivacySetting('allowSharing')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-category">
+                        <h4>Data & Analytics</h4>
+                        <div class="toggle-setting">
+                            <div class="setting-info">
+                                <div class="setting-title">Analytics</div>
+                                <div class="setting-subtitle">Help improve the app with usage data</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="analytics" checked onchange="togglePrivacySetting('analytics')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-category">
+                        <h4>Account Management</h4>
+                        <div class="setting-item" onclick="showNotification('Download data feature coming soon')">
+                            <div class="setting-icon"><i class="fas fa-download"></i></div>
+                            <div class="setting-info">
+                                <div class="setting-title">Download Your Data</div>
+                                <div class="setting-subtitle">Get a copy of your GreenConnect data</div>
+                            </div>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="setting-item" onclick="confirmDeleteAccount()" style="border-top: 1px solid rgba(231, 76, 60, 0.2);">
+                            <div class="setting-icon" style="background: rgba(231, 76, 60, 0.2); color: #e74c3c;"><i class="fas fa-trash"></i></div>
+                            <div class="setting-info">
+                                <div class="setting-title" style="color: #e74c3c;">Delete Account</div>
+                                <div class="setting-subtitle">Permanently delete your account</div>
+                            </div>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- About App Modal -->
+        <div class="modal" id="aboutAppModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button class="close-btn" onclick="closeModal('aboutAppModal')">&times;</button>
+                    <h3>About GreenConnect</h3>
+                </div>
+                <div class="about-content">
+                    <div class="about-logo">
+                        <svg width="80" height="80" viewBox="0 0 120 120" fill="none">
+                            <circle cx="60" cy="60" r="58" fill="url(#aboutGradient)" stroke="rgba(46, 204, 113, 0.3)" stroke-width="4"/>
+                            <path d="M60 15C52.5 15 45 22.5 45 30C45 37.5 52.5 45 60 45C67.5 45 75 37.5 75 30C75 22.5 67.5 15 60 15Z" fill="white"/>
+                            <path d="M30 45C30 52.5 37.5 60 45 60C52.5 60 60 52.5 60 45C60 37.5 52.5 30 45 30C37.5 30 30 37.5 30 45Z" fill="white" opacity="0.9"/>
+                            <path d="M75 45C75 52.5 82.5 60 90 60C97.5 60 105 52.5 105 45C105 37.5 97.5 30 90 30C82.5 30 75 37.5 75 45Z" fill="white" opacity="0.9"/>
+                            <path d="M60 75C52.5 75 45 82.5 45 90C45 97.5 52.5 105 60 105C67.5 105 75 97.5 75 90C75 82.5 67.5 75 60 75Z" fill="white"/>
+                            <circle cx="60" cy="60" r="15" fill="#2ECC71"/>
+                            <path d="M60 45L45 60L60 75L75 60L60 45Z" fill="white" opacity="0.8"/>
+                            <defs>
+                                <linearGradient id="aboutGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#2ECC71"/>
+                                    <stop offset="50%" style="stop-color:#27AE60"/>
+                                    <stop offset="100%" style="stop-color:#1E8449"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    
+                    <h2 class="about-title">GreenConnect</h2>
+                    <p class="about-version">Version 1.0.0</p>
+                    <p class="about-tagline">Smart Clean & Green Community Platform</p>
+
+                    <div class="about-section">
+                        <h4>Our Mission</h4>
+                        <p>GreenConnect empowers communities to take action against environmental issues. Together, we're building a cleaner, greener planet through collective action and awareness.</p>
+                    </div>
+
+                    <div class="about-section">
+                        <h4>Features</h4>
+                        <ul class="about-features">
+                            <li><i class="fas fa-check-circle"></i> Report environmental issues with AI analysis</li>
+                            <li><i class="fas fa-check-circle"></i> Join community cleanup events</li>
+                            <li><i class="fas fa-check-circle"></i> Earn eco points for sustainable actions</li>
+                            <li><i class="fas fa-check-circle"></i> Redeem points for eco-friendly products</li>
+                            <li><i class="fas fa-check-circle"></i> Connect with environmental advocates</li>
+                            <li><i class="fas fa-check-circle"></i> Track your environmental impact</li>
+                        </ul>
+                    </div>
+
+                    <div class="about-section">
+                        <h4>Contact & Support</h4>
+                        <div class="about-links">
+                            <a href="#" onclick="showNotification('Opening website...'); return false;">
+                                <i class="fas fa-globe"></i> Website
+                            </a>
+                            <a href="#" onclick="showNotification('Opening support...'); return false;">
+                                <i class="fas fa-life-ring"></i> Support
+                            </a>
+                            <a href="#" onclick="showNotification('Opening privacy policy...'); return false;">
+                                <i class="fas fa-shield-alt"></i> Privacy Policy
+                            </a>
+                            <a href="#" onclick="showNotification('Opening terms...'); return false;">
+                                <i class="fas fa-file-contract"></i> Terms of Service
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="about-section">
+                        <h4>Follow Us</h4>
+                        <div class="about-social">
+                            <a href="#" onclick="showNotification('Opening Twitter...'); return false;">
+                                <i class="fab fa-twitter"></i>
+                            </a>
+                            <a href="#" onclick="showNotification('Opening Instagram...'); return false;">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                            <a href="#" onclick="showNotification('Opening Facebook...'); return false;">
+                                <i class="fab fa-facebook"></i>
+                            </a>
+                            <a href="#" onclick="showNotification('Opening LinkedIn...'); return false;">
+                                <i class="fab fa-linkedin"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="about-footer">
+                        <p>© 2024 GreenConnect. All rights reserved.</p>
+                        <p>Made with 💚 for a better planet</p>
                     </div>
                 </div>
             </div>
