@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
@@ -51,7 +51,7 @@ router.post('/send-verification', async (req, res) => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; background: #f9f9f9; border-radius: 10px;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #2ECC71; margin: 0;">🌱 GreenConnect</h1>
+            <h1 style="color: #2ECC71; margin: 0;"> GreenConnect</h1>
             <p style="color: #666; margin-top: 5px;">Smart Clean & Green Community Platform</p>
           </div>
           <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
@@ -68,8 +68,10 @@ router.post('/send-verification', async (req, res) => {
 
     res.json({ message: 'Verification code sent to your email' });
   } catch (error) {
-    console.error('Send verification error:', error);
-    res.status(500).json({ error: { message: 'Failed to send verification email. Please check your email address.' } });
+    console.error('Send verification error:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Email user:', process.env.EMAIL_USER);
+    res.status(500).json({ error: { message: 'Failed to send verification email: ' + error.message } });
   }
 });
 

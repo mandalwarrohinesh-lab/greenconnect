@@ -21,12 +21,26 @@ const wss = new WebSocket.Server({ server });
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    // and all origins in development
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+// Handle preflight requests
+app.options('*', cors());
 // Increase body size limit to handle base64 images (10MB)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Log every incoming request for debugging
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
 
 // Static files for uploads
 app.use('/uploads', express.static('uploads'));
@@ -118,11 +132,9 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
-  console.log(`🌱 GreenConnect API Server running on port ${PORT}`);
-  console.log(`📡 WebSocket server ready`);
-  console.log(`🔗 API: http://localhost:${PORT}/api`);
-  console.log(`💚 Environment: ${process.env.NODE_ENV}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`GreenConnect API running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV}`);
 });
 
 module.exports = { app, wss };
